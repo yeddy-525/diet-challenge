@@ -828,12 +828,17 @@ function renderAchievement() {
     const keys = Object.keys(weights).sort();
     const latest = keys.length > 0 ? weights[keys[keys.length - 1]] : w.startWeight;
     const diff = latest - w.startWeight;
-    weightEl.textContent = (diff <= 0 ? '' : '+') + diff.toFixed(1) + 'kg';
-    weightEl.className = 'ach-value ' + (diff <= 0 ? 'green' : 'red');
-    weightSubEl.textContent = `${w.startWeight}kg → ${latest}kg (목표 ${w.goalWeight}kg)`;
+    if (diff === 0) {
+      weightEl.textContent = w.startWeight + 'kg';
+      weightEl.className = 'ach-value blue';
+    } else {
+      weightEl.textContent = (diff < 0 ? '' : '+') + diff.toFixed(1) + 'kg';
+      weightEl.className = 'ach-value ' + (diff <= 0 ? 'green' : 'red');
+    }
+    if (weightSubEl) weightSubEl.textContent = `${w.startWeight}kg → ${latest}kg (목표 ${w.goalWeight}kg)`;
   } else {
     weightEl.textContent = '-';
-    weightSubEl.textContent = '체중 미입력';
+    if (weightSubEl) weightSubEl.textContent = '체중 미입력';
   }
 
   // 운동 달성률 (이번 달 전체)
