@@ -772,7 +772,16 @@ async function fetchRemote() {
         if (!state[stateKey]) state[stateKey] = { days: Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''})), cheat: false };
         if (!state[stateKey].days) state[stateKey].days = Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''}));
         const p = dateKey.split('_');
-        if (dateKey.includes('_cheat')) {
+        if (dateKey === 'weight_setup') {
+          try {
+            const ws = JSON.parse(String(value));
+            localStorage.setItem('diet_weight_' + member, JSON.stringify({
+              startWeight: ws.startWeight,
+              goalWeight: ws.goalWeight,
+              weights: {}
+            }));
+          } catch(e) {}
+        } else if (dateKey.includes('_cheat')) {
           state[stateKey].cheat = Number(value) === 1;
         } else if (p.length >= 3) {
           const d = parseInt(p[1].replace('d', ''));
