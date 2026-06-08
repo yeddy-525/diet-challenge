@@ -799,7 +799,7 @@ async function fetchRemote() {
         }
       }
     }
-    saveLocal(state); setSyncState('ok'); render();
+    saveLocal(state); setSyncState('ok'); render(); setTimeout(renderAchievement, 100);
   } catch(e) { setSyncState('error'); }
 }
 function setSyncState(s) {
