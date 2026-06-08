@@ -227,7 +227,7 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
       <div id="code-input-area" style="display:none;margin-top:10px;">
         <div class="code-input-wrap">
           <input class="code-input" id="code-input" placeholder="코드를 입력해주세요" maxlength="10" />
-          <button class="code-btn" onclick="submitCode()">확인</button>
+          <button class="code-btn" id="code-submit-btn" onclick="submitCode()">확인</button>
         </div>
       </div>
       <div class="intro-error" id="intro-error"></div>
@@ -560,17 +560,34 @@ function showTab(t, btn) {
 }
 
 // ── 사용자 선택 ──
-function selectUser(name) {
+async function selectUser(name) {
   currentUser = name;
   localStorage.setItem('diet_current_user', name);
-  // 초기 세팅 여부 확인
+  // 먼저 로컬 확인
   const w = getWeightData(name);
-  if (!w.startWeight) {
-    document.getElementById('setup-overlay').style.display = 'flex';
-  } else {
+  if (w.startWeight) {
     checkWeeklyWeight(name);
     enterMain();
+    return;
   }
+  // 로컬에 없으면 시트에서 확인
+  if (apiUrl) {
+    try {
+      const res = await fetch(apiUrl + '?action=get');
+      const json = await res.json();
+      const remote = (json.data || {})[name] || {};
+      if (remote['weight_setup']) {
+        const ws = JSON.parse(String(remote['weight_setup']));
+        const wd = { startWeight: ws.startWeight, goalWeight: ws.goalWeight, weights: { [getWeekKey(0)]: ws.startWeight } };
+        saveWeightData(name, wd);
+        checkWeeklyWeight(name);
+        enterMain();
+        return;
+      }
+    } catch(e) {}
+  }
+  // 시트에도 없으면 입력 팝업
+  document.getElementById('setup-overlay').style.display = 'flex';
 }
 
 let codeMode = null;
@@ -632,6 +649,10 @@ function saveSetup() {
   w.goalWeight = gw;
   w.weights = { [getWeekKey(0)]: sw };
   saveWeightData(currentUser, w);
+  // 구글 시트에도 저장
+  if (apiUrl) {
+    syncToRemote(currentUser, 'weight_setup', JSON.stringify({ startWeight: sw, goalWeight: gw }));
+  }
   document.getElementById('setup-overlay').style.display = 'none';
   enterMain();
 }
@@ -1135,7 +1156,13 @@ async function fetchRemoteSettings() {
     if (data.endDate) settings.endDate = data.endDate;
     if (data.exGoal) settings.exGoal = parseInt(data.exGoal);
     saveSettings();
-  } catch(e) {}
+  } catch(e) {
+    // 네트워크 오류 시 로컬 설정 사용
+  } finally {
+    // 설정 로드 완료 후 코드 입력 활성화
+    const codeBtn = document.getElementById('code-submit-btn');
+    if (codeBtn) codeBtn.disabled = false;
+  }
 }
 
 function saveAdminSettings() {
@@ -1193,7 +1220,13 @@ function logoutAdmin() {
 
 // ── 초기화 ──
 loadSettings();
-fetchRemoteSettings();
+if (apiUrl) {
+  fetchRemoteSettings();
+} else {
+  // API URL 없으면 바로 활성화
+  const codeBtn = document.getElementById('code-submit-btn');
+  if (codeBtn) codeBtn.disabled = false;
+}
 const savedUser = localStorage.getItem('diet_current_user');
 if (savedUser === 'admin') {
   currentUser = 'admin';
