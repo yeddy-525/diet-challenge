@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>YJ JE 다이어트 챌린지</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --blue:#1B64DA;--blue-lt:#EBF2FF;--blue-dk:#0D4A9E;
+  --red:#F04452;--red-lt:#FFF0F0;--red-dk:#C7303B;
+  --amber:#F5B800;--amber-lt:#FFF8E6;--amber-dk:#B37D00;
+  --green:#00C896;--green-lt:#E0FFF6;--green-dk:#007A5A;
+  --purple:#6B4EFF;--purple-lt:#EEEBFF;
+  --bg:#F2F4F6;--card:#FFFFFF;--border:#D1D6DB;
+  --text:#191F28;--muted:#8B95A1;
+  --radius:16px;--radius-sm:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;letter-spacing:-0.01em;}
+body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(--bg);color:var(--text);min-height:100vh;display:flex;justify-content:center;}
+.app-wrap{width:100%;max-width:480px;min-height:100vh;background:var(--bg);position:relative;box-shadow:0 0 40px rgba(0,0,0,.08);display:flex;flex-direction:column;}
+
+/* ── 초기 페이지 ── */
+#page-intro{min-height:100vh;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;background:var(--bg);}
+.intro-logo{font-size:20px;font-weight:700;letter-spacing:.2em;color:var(--blue);text-transform:uppercase;text-align:center;}
+.intro-title{font-size:28px;font-weight:700;color:var(--text);margin-bottom:6px;text-align:center;line-height:1.3;}
+.intro-sub{font-size:14px;color:var(--muted);margin-bottom:60px;text-align:center;}
+.intro-btns{display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;margin:0 auto;}
+.intro-btn{padding:18px;border-radius:var(--radius);border:none;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;transition:all .2s;letter-spacing:-.01em;}
+.intro-btn.primary{background:var(--blue);color:white;}
+.intro-btn.primary:active{opacity:.85;}
+.intro-btn.secondary{background:var(--card);color:var(--text);border:1.5px solid var(--border);}
+.intro-btn.secondary:active{background:var(--bg);}
+.intro-divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:4px 0;}
+.intro-divider::before,.intro-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.code-input-wrap{display:flex;gap:8px;width:100%;max-width:320px;}
+.code-input{flex:1;padding:14px 16px;border-radius:var(--radius-sm);border:1.5px solid var(--border);font-size:15px;font-family:'DM Mono',monospace;background:var(--card);outline:none;color:var(--text);}
+.code-input:focus{border-color:var(--blue);}
+.code-btn{padding:14px 20px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;}
+.intro-error{font-size:12px;color:var(--red);margin-top:8px;text-align:center;min-height:18px;}
+
+/* ── 초기 세팅 팝업 ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;}
+.bottom-sheet{background:var(--card);border-radius:24px 24px 0 0;padding:28px 24px 40px;width:100%;max-width:480px;text-align:center;}
+.sheet-title{font-size:18px;font-weight:700;margin-bottom:6px;}
+.sheet-sub{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.5;}
+.sheet-field{margin-bottom:16px;}
+.sheet-label{font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500;text-align:left;display:block;}
+.sheet-input{width:100%;padding:14px 16px;border-radius:var(--radius-sm);border:1.5px solid var(--border);font-size:16px;font-family:inherit;letter-spacing:-0.01em;background:var(--bg);outline:none;color:var(--text);}
+.sheet-input:focus{border-color:var(--blue);}
+.sheet-btn{width:100%;padding:16px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;margin-top:8px;}
+.sheet-skip{width:100%;padding:12px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;margin-top:4px;}
+
+/* ── 체중 입력 팝업 ── */
+.weight-banner{margin:0 16px 12px;background:var(--blue-lt);border-radius:var(--radius);border:1px solid var(--blue);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.weight-banner-text{font-size:13px;color:var(--blue-dk);font-weight:500;}
+.weight-inline{display:flex;align-items:center;gap:8px;}
+.weight-inline input{width:70px;padding:7px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--blue);font-size:14px;font-family:'DM Mono',monospace;background:white;outline:none;text-align:center;}
+.weight-inline button{padding:7px 14px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;}
+.weight-skip{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;padding:4px;}
+
+/* ── 탭 네비 ── */
+.tab-nav{display:flex;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.tab-btn{flex:1;padding:14px 0;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;font-family:inherit;letter-spacing:-0.01em;}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
+
+/* ── 유저 헤더 ── */
+.user-header{background:var(--blue);padding:20px 16px 16px;display:flex;align-items:center;justify-content:space-between;}
+.user-name{font-size:20px;font-weight:700;color:white;}
+.user-sub{font-size:12px;color:rgba(255,255,255,.7);margin-top:2px;}
+.change-user-btn{font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.15);border:none;border-radius:999px;padding:6px 12px;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;}
+
+/* ── 달성률 카드 ── */
+.achievement-card{margin:16px 16px 0;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;}
+.achievement-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;}
+.achievement-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.achievement-date{font-size:11px;color:var(--muted);}
+.achievement-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.ach-item{background:var(--card);padding:14px 16px;}
+.ach-label{font-size:11px;color:var(--muted);margin-bottom:6px;}
+.ach-value{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);}
+.ach-value.blue{color:var(--blue);}
+.ach-value.green{color:var(--green-dk);}
+.ach-value.red{color:var(--red);}
+.ach-bar{height:3px;background:var(--bg);border-radius:999px;margin-top:6px;overflow:hidden;}
+.ach-bar-fill{height:100%;border-radius:999px;background:var(--blue);transition:width .4s;}
+.ach-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* ── 비교 메시지 ── */
+.compare-msg{margin:0 16px 12px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;display:flex;flex-direction:column;gap:6px;}
+.cmp-row{display:flex;align-items:center;justify-content:space-between;}
+.cmp-label{font-size:12px;color:var(--muted);}
+.cmp-val{font-size:13px;font-weight:600;}
+.cmp-val.win{color:var(--green-dk);}
+.cmp-val.lose{color:var(--red);}
+.cmp-val.draw{color:var(--muted);}
+
+/* ── 섹션 ── */
+.section{padding:0 16px 12px;}
+.section-label{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;}
+.section-top{padding:16px 16px 0;}
+
+/* ── 날짜 도트 ── */
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.day-col{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+.day-name{font-size:10px;color:var(--muted);}
+.day-name.today{color:var(--blue);font-weight:700;}
+.day-dot{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s;font-weight:600;}
+.day-dot.status-o{background:var(--green-lt);border-color:var(--green);color:var(--green-dk);}
+.day-dot.status-tri{background:var(--amber-lt);border-color:var(--amber);color:var(--amber-dk);}
+.day-dot.selected{box-shadow:0 0 0 2.5px var(--blue);}
+.day-dot:active{transform:scale(.9);}
+
+/* ── 기록 카드 ── */
+.record-card{margin:0 16px 12px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;}
+.record-card.active-card{border-color:var(--blue);}
+.record-header{padding:12px 14px 0;display:flex;align-items:center;justify-content:space-between;}
+.record-date{font-size:12px;font-weight:600;color:var(--blue);}
+.record-status{font-size:11px;color:var(--muted);}
+.record-fields{padding:10px 14px;display:flex;flex-direction:column;gap:8px;}
+.record-row{display:flex;flex-direction:column;gap:3px;}
+.record-label{font-size:10px;color:var(--muted);font-weight:500;}
+.record-input{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);font-size:13px;font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s;}
+.record-input:focus{border-color:var(--blue);}
+.record-input.empty-warn{border-color:var(--red);background:var(--red-lt);}
+.save-btn{margin:0 14px 14px;width:calc(100% - 28px);padding:10px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;transition:all .15s;}
+.save-btn:active{opacity:.85;}
+
+/* ── 치팅 ── */
+.cheat-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.cheat-chip{padding:9px 18px;border-radius:999px;border:1.5px solid var(--border);background:var(--card);font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;letter-spacing:-0.01em;}
+.cheat-chip.used{background:var(--amber-lt);border-color:var(--amber);color:var(--amber-dk);}
+.cheat-chip.over{background:var(--red-lt);border-color:var(--red);color:var(--red);}
+.cheat-info{font-size:12px;color:var(--muted);}
+
+/* ── 벌금 배너 ── */
+.fine-banner{margin:0 16px 12px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:16px 20px;}
+.fine-top{display:flex;justify-content:space-between;align-items:center;}
+.fine-label{font-size:13px;color:var(--muted);}
+.fine-amount{font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red);}
+.fine-amount.zero{color:var(--green-dk);}
+.fine-tag{font-size:10px;padding:3px 10px;border-radius:999px;margin-top:6px;display:inline-block;}
+.fine-tag.confirm{background:var(--red-lt);color:var(--red-dk);}
+.fine-tag.estimate{background:var(--amber-lt);color:var(--amber-dk);}
+
+/* ── 상대방 카드 ── */
+.friend-card{margin:0 16px 12px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;}
+.friend-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.friend-name{font-size:12px;font-weight:600;color:var(--muted);}
+.friend-fine{font-size:12px;font-family:'DM Mono',monospace;font-weight:600;}
+.friend-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.friend-col{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.friend-day{font-size:9px;color:var(--muted);}
+.friend-dot{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:600;}
+.friend-dot.status-o{background:var(--green-lt);border-color:var(--green);color:var(--green-dk);}
+.friend-dot.status-tri{background:var(--amber-lt);border-color:var(--amber);color:var(--amber-dk);}
+
+/* ── 월별 성과 ── */
+.monthly-wrap{padding:16px;display:flex;flex-direction:column;gap:14px;}
+.compare-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;}
+.compare-header{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--blue);padding:12px 16px;}
+.compare-header span{font-size:12px;font-weight:600;color:white;text-align:center;}
+.compare-header span:first-child{text-align:left;}
+.compare-row{display:grid;grid-template-columns:1fr 1fr 1fr;padding:12px 16px;border-bottom:1px solid var(--border);align-items:center;}
+.compare-row:last-child{border-bottom:none;}
+.compare-row.highlight{background:var(--purple-lt);}
+.compare-row span{font-size:13px;text-align:center;}
+.compare-row span:first-child{text-align:left;color:var(--muted);font-size:11px;}
+.compare-row .val{font-weight:600;font-family:'DM Mono',monospace;}
+.compare-row .val.red{color:var(--red);}
+.graph-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:16px;}
+.graph-title{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;}
+.graph-wrap{position:relative;height:180px;}
+
+/* ── 관리자 페이지 ── */
+.admin-wrap{padding:16px;display:flex;flex-direction:column;gap:12px;}
+.admin-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:16px;}
+.admin-card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px;}
+.admin-field{margin-bottom:12px;}
+.admin-label{font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:500;}
+.admin-input{width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);font-size:14px;font-family:inherit;letter-spacing:-0.01em;background:var(--bg);outline:none;color:var(--text);}
+.admin-input:focus{border-color:var(--blue);}
+.admin-btn{width:100%;padding:12px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;}
+.admin-logout{width:100%;padding:10px;background:none;border:1.5px solid var(--border);color:var(--muted);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;margin-top:8px;}
+
+/* ── 기타 ── */
+.sync-bar{display:flex;align-items:center;justify-content:flex-end;padding:0 16px 8px;gap:6px;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+.sync-dot.syncing{background:var(--amber);animation:pulse .8s infinite;}
+.sync-dot.error{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sync-text{font-size:11px;color:var(--muted);}
+.page{display:none !important;}.page.active{display:block !important;}
+.pb32{padding-bottom:32px;}
+</style>
+</head>
+<body>
+<div class="app-wrap">
+
+<!-- ── 초기 페이지 ── -->
+<div id="page-intro" class="page active">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:0 24px;">
+    <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:0;">
+      <!-- 타이틀 -->
+      <div style="text-align:center;margin-bottom:48px;">
+        <div class="intro-logo">Diet Challenge</div>
+        <div style="font-size:14px;color:var(--muted);margin-top:6px;">이름을 선택해주세요</div>
+      </div>
+      <!-- 이름 버튼 -->
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+        <button class="intro-btn primary" onclick="selectUser('예진')">예진</button>
+        <button class="intro-btn primary" onclick="selectUser('지은')">지은</button>
+      </div>
+      <!-- 구분선 -->
+      <div style="display:flex;align-items:center;gap:12px;margin:8px 0;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <span style="font-size:12px;color:var(--muted);">또는</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+      <!-- 게스트/관리자 -->
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="intro-btn secondary" style="flex:1;font-size:14px;padding:14px;" onclick="toggleCodeInput('guest')">게스트 모드</button>
+        <button class="intro-btn secondary" style="flex:1;font-size:14px;padding:14px;" onclick="toggleCodeInput('admin')">관리자 모드</button>
+      </div>
+      <!-- 코드 입력 -->
+      <div id="code-input-area" style="display:none;margin-top:10px;">
+        <div class="code-input-wrap">
+          <input class="code-input" id="code-input" placeholder="코드를 입력해주세요" maxlength="10" />
+          <button class="code-btn" onclick="submitCode()">확인</button>
+        </div>
+      </div>
+      <div class="intro-error" id="intro-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 초기 세팅 팝업 ── -->
+<div id="setup-overlay" class="overlay" style="display:none;">
+  <div class="bottom-sheet">
+    <div class="sheet-title">처음 오셨군요! 👋</div>
+    <div class="sheet-sub">챌린지 목표를 설정해요. 한 달 동안 목표 감량을 입력해주세요.</div>
+    <div class="sheet-field">
+      <div class="sheet-label">현재 체중 (kg)</div>
+      <input class="sheet-input" id="setup-start-weight" type="number" step="0.1" placeholder="00.0" />
+    </div>
+    <div class="sheet-field">
+      <div class="sheet-label">목표 체중 (kg)</div>
+      <input class="sheet-input" id="setup-goal-weight" type="number" step="0.1" placeholder="00.0" />
+    </div>
+    <button class="sheet-btn" onclick="saveSetup()">시작하기</button>
+    <button class="sheet-skip" onclick="skipSetup()">나중에 입력할게요</button>
+  </div>
+</div>
+
+<!-- ── 체중 입력 팝업 ── -->
+<div id="weight-overlay" class="overlay" style="display:none;">
+  <div class="bottom-sheet">
+    <div class="sheet-title">이번 주 체중을 입력해주세요 📊</div>
+    <div class="sheet-sub">달성률 계산에 사용돼요!</div>
+    <div class="sheet-field">
+      <div class="sheet-label">이번 주 체중 (kg)</div>
+      <input class="sheet-input" id="weekly-weight-input" type="number" step="0.1" placeholder="00.0" />
+    </div>
+    <button class="sheet-btn" onclick="saveWeeklyWeight()">저장</button>
+    <button class="sheet-skip" onclick="skipWeeklyWeight()">나중에</button>
+  </div>
+</div>
+
+<!-- ── 메인 페이지 ── -->
+<div id="page-main" class="page" style="display:none;">
+  <div class="user-header">
+    <div>
+      <div class="user-name" id="main-user-name">예진</div>
+      <div class="user-sub" id="main-user-sub">챌린지 진행 중</div>
+    </div>
+    <button class="change-user-btn" onclick="changeUser()">사용자 변경</button>
+  </div>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" id="tab-btn-week" onclick="showTab('week',this)">이번 주</button>
+    <button class="tab-btn" id="tab-btn-friend" onclick="showTab('friend',this)">지은 기록</button>
+    <button class="tab-btn" id="tab-btn-monthly" onclick="showTab('monthly',this)">한 달 성과</button>
+  </nav>
+
+  <!-- 이번 주 탭 -->
+  <div id="tab-week">
+    <!-- 달성률 카드 -->
+    <div style="padding:10px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+      <div style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span>체중 <strong id="ach-weight" style="color:var(--text);">-</strong></span>
+        <span style="color:var(--border);">·</span>
+        <span>운동 <strong id="ach-ex" style="color:var(--blue);">0%</strong></span>
+        <span style="color:var(--border);">·</span>
+        <span>식단 <strong id="ach-meal" style="color:var(--blue);">0%</strong></span>
+        <span style="color:var(--border);">·</span>
+        <span>벌금 <strong id="ach-fine" style="color:var(--red);">0원</strong></span>
+      </div>
+      <span style="font-size:11px;color:var(--muted);" id="ach-date"></span>
+    </div>
+    <div style="display:none;"><span id="ach-weight-sub"></span><div id="ach-ex-bar"></div><div id="ach-meal-bar"></div></div>
+
+
+
+    <div class="sync-bar">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span class="sync-text" id="sync-text">로컬 저장</span>
+    </div>
+
+    <!-- 주 네비 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 10px;">
+      <button class="nav-btn" onclick="changeWeek(-1)" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--card);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);">‹</button>
+      <span style="font-size:14px;font-weight:500;" id="week-label"></span>
+      <button class="nav-btn" onclick="changeWeek(1)" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--card);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);">›</button>
+    </div>
+
+    <div class="section">
+      <div class="section-label">이번 주 기록</div>
+      <div class="day-grid" id="day-grid"></div>
+    </div>
+
+    <div class="record-card" id="record-card">
+      <div class="record-header">
+        <span class="record-date" id="record-date"></span>
+        <span class="record-status" id="record-status"></span>
+      </div>
+      <div class="record-fields">
+        <div class="record-row">
+          <div class="record-label">운동</div>
+          <input class="record-input" id="memo-ex" placeholder="오늘 운동 뭐 했어요?" />
+        </div>
+        <div class="record-row">
+          <div class="record-label">식단 1</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input class="record-input" id="memo-m1" placeholder="첫 번째 식단" style="flex:1;" />
+            <button id="m1-toggle" onclick="toggleMealOk(1)" style="min-width:44px;height:38px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--green-lt);color:var(--green-dk);font-size:14px;cursor:pointer;font-family:inherit;transition:all .15s;">✅</button>
+          </div>
+        </div>
+        <div class="record-row">
+          <div class="record-label">식단 2</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input class="record-input" id="memo-m2" placeholder="두 번째 식단" style="flex:1;" />
+            <button id="m2-toggle" onclick="toggleMealOk(2)" style="min-width:44px;height:38px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--green-lt);color:var(--green-dk);font-size:14px;cursor:pointer;font-family:inherit;transition:all .15s;">✅</button>
+          </div>
+        </div>
+      </div>
+      <button class="save-btn" onclick="saveMemo()" id="save-btn">저장</button>
+    </div>
+
+    <div class="section">
+      <div class="section-label">치팅 — 2주에 1회</div>
+      <div class="cheat-wrap">
+        <button class="cheat-chip" id="cheat-btn" onclick="toggleCheat()">이번 주 치팅 사용</button>
+        <span class="cheat-info" id="cheat-info"></span>
+      </div>
+    </div>
+
+    <!-- 상대방 비교 메시지 -->
+    <div class="compare-msg" id="compare-msg">
+      <div class="cmp-row">
+        <span class="cmp-label">🏃 운동</span>
+        <span class="cmp-val" id="cmp-ex"></span>
+      </div>
+      <div class="cmp-row">
+        <span class="cmp-label">💸 벌금</span>
+        <span class="cmp-val" id="cmp-fine"></span>
+      </div>
+    </div>
+
+    <!-- 상대방 현황 -->
+    <div class="friend-card">
+      <div class="friend-header">
+        <span class="friend-name" id="friend-name">상대방 현황</span>
+        <span class="friend-fine" id="friend-fine"></span>
+      </div>
+      <div class="friend-grid" id="friend-grid"></div>
+    </div>
+
+    <div class="fine-banner">
+      <div class="fine-top">
+        <span class="fine-label" id="fine-label">이번 주 예상 벌금</span>
+        <span class="fine-amount zero" id="fine-total">0원</span>
+      </div>
+      <span class="fine-tag estimate" id="fine-tag">일요일에 확정</span>
+    </div>
+    <div style="padding:0 16px 32px;font-size:11px;color:var(--muted);">
+      ※ 운동 주 4회 미달 × 500원 / 식단 빈칸 1회 500원 / 치팅 초과 500원
+    </div>
+  </div>
+
+  <!-- 상대방 기록 뷰 탭 -->
+  <div id="tab-friend" style="display:none;">
+    <div style="padding:12px 16px 0;font-size:12px;color:var(--muted);" id="friend-view-label"></div>
+    <div style="padding:0 16px;">
+      <div class="day-grid" id="friend-view-grid" style="margin-bottom:12px;margin-top:10px;"></div>
+    </div>
+    <div id="friend-view-cards"></div>
+  </div>
+
+  <!-- 한 달 성과 탭 -->
+  <div id="tab-monthly" style="display:none;">
+    <div class="monthly-wrap">
+      <div class="graph-card">
+        <div class="graph-title">주차별 벌금</div>
+        <div class="graph-wrap"><canvas id="fine-chart"></canvas></div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-header">
+          <span>항목</span><span id="m-name-a">예진</span><span id="m-name-b">지은</span>
+        </div>
+        <div id="monthly-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 관리자 페이지 ── -->
+<div id="page-admin" class="page" style="display:none;">
+  <div style="background:var(--text);padding:20px 16px 16px;">
+    <div style="font-size:20px;font-weight:700;color:white;">관리자 설정</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:2px;">YJ JE 다이어트 챌린지</div>
+  </div>
+  <div class="admin-wrap">
+    <div class="admin-card">
+      <div class="admin-card-title">기본 설정</div>
+      <div class="admin-field">
+        <div class="admin-label">Apps Script URL</div>
+        <input class="admin-input" id="admin-api-url" placeholder="https://script.google.com/..." style="font-family:'DM Mono',monospace;font-size:11px;" />
+      </div>
+      <div class="admin-field">
+        <div class="admin-label">챌린지 종료일</div>
+        <input class="admin-input" id="admin-end-date" type="date" />
+      </div>
+      <div class="admin-field">
+        <div class="admin-label">주간 운동 목표 횟수</div>
+        <input class="admin-input" id="admin-ex-goal" type="number" placeholder="4" />
+      </div>
+      <div class="admin-field">
+        <div class="admin-label">게스트 코드</div>
+        <input class="admin-input" id="admin-guest-code" placeholder="게스트 접속 코드" />
+      </div>
+      <button class="admin-btn" onclick="saveAdminSettings()">저장</button>
+    </div>
+    <div class="admin-card" style="margin-top:0;">
+      <div class="admin-card-title">게스트 관리</div>
+      <div id="guest-list" style="margin-bottom:10px;font-size:13px;color:var(--muted);">불러오는 중...</div>
+      <button onclick="loadGuestList()" style="padding:8px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:inherit;">새로고침</button>
+    </div>
+    <button class="admin-logout" onclick="logoutAdmin()">관리자 로그아웃</button>
+  </div>
+</div>
+
+<script>
+// ── 상수 ──
+const API_URL = 'https://script.google.com/macros/s/AKfycbzSqbXqrN9saX6_LFI2SVZzP9hPjtcZ4W6JMEWMl4dSlejNjnJafXrOT-eyy57Gq39K/exec';
+const ADMIN_CODE = '0525';
+const MEMBERS = ['예진', '지은'];
+const DAYS = ['월','화','수','목','금','토','일'];
+const FINE = 500;
+const CHALLENGE_END = '2026-07-08';
+
+// ── 상태 ──
+let currentUser = null; // '예진' | '지은' | 'admin'
+let weekOffset = 0;
+let selectedDayIdx = null;
+let fineChart = null;
+let settings = { exGoal: 4, endDate: CHALLENGE_END, guestCode: '' };
+
+// ── 유틸 ──
+function getTodayDayIdx() { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; }
+function isCurrentWeek() { return weekOffset === 0; }
+function isSunday() { return new Date().getDay() === 0; }
+function getWeekKey(offset) {
+  const now = new Date(); const wd = now.getDay();
+  const diff = wd === 0 ? -6 : 1 - wd;
+  const mon = new Date(now); mon.setDate(now.getDate() + diff + offset * 7);
+  return mon.toISOString().slice(0, 10);
+}
+function getWeekLabel(offset) {
+  const key = getWeekKey(offset); const mon = new Date(key);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  return `${mon.getMonth()+1}/${mon.getDate()} ~ ${sun.getMonth()+1}/${sun.getDate()}`;
+}
+function getDayLabel(offset, idx) {
+  const key = getWeekKey(offset); const mon = new Date(key);
+  mon.setDate(mon.getDate() + idx);
+  return `${mon.getMonth()+1}/${mon.getDate()} (${DAYS[idx]})`;
+}
+function getDaysRemaining() {
+  const end = new Date(settings.endDate);
+  const now = new Date();
+  end.setHours(23,59,59,0);
+  const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  return Math.max(0, diff);
+}
+
+// ── 로컬 스토리지 ──
+function loadLocal() { try { return JSON.parse(localStorage.getItem('diet_state') || '{}'); } catch(e) { return {}; } }
+function saveLocal(s) { localStorage.setItem('diet_state', JSON.stringify(s)); }
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('diet_settings') || '{}');
+    settings = { ...settings, ...s };
+  } catch(e) {}
+}
+function saveSettings() { localStorage.setItem('diet_settings', JSON.stringify(settings)); }
+
+function getWk(state, member, offset) {
+  const k = member + '_' + getWeekKey(offset);
+  if (!state[k]) state[k] = { days: Array(7).fill(null).map(() => ({ex:'',m1:'',m2:'',m1ok:true,m2ok:true})), cheat: false };
+  // 기존 데이터 마이그레이션: m1ok/m2ok 없으면 true로
+  state[k].days.forEach(d => {
+    if (d.m1ok === undefined) d.m1ok = true;
+    if (d.m2ok === undefined) d.m2ok = true;
+    if (typeof d.m1ok === 'string') d.m1ok = d.m1ok !== 'false' && d.m1ok !== '0';
+    if (typeof d.m2ok === 'string') d.m2ok = d.m2ok !== 'false' && d.m2ok !== '0';
+  });
+  if (!state[k].days) state[k].days = Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''}));
+  return state[k];
+}
+function getWeightData(member) {
+  try { return JSON.parse(localStorage.getItem('diet_weight_' + member) || '{}'); } catch(e) { return {}; }
+}
+function saveWeightData(member, data) { localStorage.setItem('diet_weight_' + member, JSON.stringify(data)); }
+
+// ── 상태 계산 ──
+function getDayStatus(day) {
+  const filled = [day.ex, day.m1, day.m2].filter(v => v.trim() !== '').length;
+  return filled === 3 ? 'o' : filled > 0 ? 'tri' : 'empty';
+}
+function isExDone(day) { return day.ex.trim() !== ''; }
+function getMealFail(day) {
+  let fail = 0;
+  if (day.m1.trim() === '' || day.m1ok === false) fail++;
+  if (day.m2.trim() === '' || day.m2ok === false) fail++;
+  return fail;
+}
+function calcWeekFine(wk, prevWk) {
+  const exDone = wk.days.filter(d => isExDone(d)).length;
+  const mealFail = wk.days.reduce((s, d) => s + getMealFail(d), 0);
+  const cheatOver = Math.max(0, (wk.cheat ? 1 : 0) + (prevWk.cheat ? 1 : 0) - 1);
+  return (Math.max(0, settings.exGoal - exDone) + mealFail + cheatOver) * FINE;
+}
+
+// ── 페이지 전환 ──
+function showPage(p) {
+  document.querySelectorAll(".page").forEach(el => { el.classList.remove("active"); el.style.display = "none"; });
+  const el = document.getElementById("page-" + p);
+  if (el) { el.classList.add("active"); el.style.display = "block"; }
+}
+function showTab(t, btn) {
+  document.getElementById('tab-week').style.display = t === 'week' ? 'block' : 'none';
+  document.getElementById('tab-friend').style.display = t === 'friend' ? 'block' : 'none';
+  document.getElementById('tab-monthly').style.display = t === 'monthly' ? 'block' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (t === 'monthly') renderMonthly();
+  if (t === 'friend') renderFriendView();
+  if (apiUrl && (t === 'week' || t === 'friend')) fetchRemote();
+}
+
+// ── 사용자 선택 ──
+function selectUser(name) {
+  currentUser = name;
+  localStorage.setItem('diet_current_user', name);
+  // 초기 세팅 여부 확인
+  const w = getWeightData(name);
+  if (!w.startWeight) {
+    document.getElementById('setup-overlay').style.display = 'flex';
+  } else {
+    checkWeeklyWeight(name);
+    enterMain();
+  }
+}
+
+let codeMode = null;
+function toggleCodeInput(mode) {
+  const area = document.getElementById("code-input-area");
+  const input = document.getElementById("code-input");
+  if (codeMode === mode) {
+    codeMode = null; area.style.display = "none";
+  } else {
+    codeMode = mode; area.style.display = "block";
+    input.placeholder = mode === "admin" ? "관리자 코드 입력" : "게스트 코드 입력";
+    input.value = ""; input.focus();
+  }
+}
+function submitCode() {
+  const code = document.getElementById("code-input").value.trim();
+  const err = document.getElementById("intro-error");
+  if (codeMode === "admin" && code === ADMIN_CODE) {
+    currentUser = "admin"; localStorage.setItem("diet_current_user", "admin");
+    loadAdminPage(); showPage("admin");
+  } else if (codeMode === "guest" && code === settings.guestCode && settings.guestCode) {
+    window.location.href = 'guest.html';
+  } else {
+    err.textContent = "코드가 맞지 않아요.";
+    setTimeout(() => { err.textContent = ""; }, 2000);
+  }
+}
+
+function enterMain() {
+  showPage('main');
+  document.getElementById('main-user-name').textContent = currentUser;
+  const days = getDaysRemaining();
+  document.getElementById('main-user-sub').textContent = `종료까지 ${days}일 남았어요`;
+  document.getElementById('m-name-a').textContent = '예진';
+  document.getElementById('m-name-b').textContent = '지은';
+  // 상대방 탭 이름 동적 설정
+  const friendName = currentUser === '예진' ? '지은' : '예진';
+  const friendTabBtn = document.getElementById('tab-btn-friend');
+  if (friendTabBtn) friendTabBtn.textContent = friendName + ' 기록';
+  selectedDayIdx = null;
+  weekOffset = 0;
+  if (apiUrl) fetchRemote();
+  else render();
+}
+
+function changeUser() {
+  localStorage.removeItem('diet_current_user');
+  currentUser = null;
+  showPage('intro');
+}
+
+// ── 초기 세팅 ──
+function saveSetup() {
+  const sw = parseFloat(document.getElementById('setup-start-weight').value);
+  const gw = parseFloat(document.getElementById('setup-goal-weight').value);
+  if (!sw || !gw) { alert('체중을 입력해주세요!'); return; }
+  const w = getWeightData(currentUser);
+  w.startWeight = sw;
+  w.goalWeight = gw;
+  w.weights = { [getWeekKey(0)]: sw };
+  saveWeightData(currentUser, w);
+  document.getElementById('setup-overlay').style.display = 'none';
+  enterMain();
+}
+function skipSetup() {
+  document.getElementById('setup-overlay').style.display = 'none';
+  enterMain();
+}
+
+// ── 주차 체중 입력 ──
+function checkWeeklyWeight(member) {
+  const w = getWeightData(member);
+  if (!w.startWeight) return;
+  const thisWeek = getWeekKey(0);
+  const lastChecked = localStorage.getItem('diet_weight_checked_' + member);
+  if (lastChecked !== thisWeek) {
+    document.getElementById('weight-overlay').style.display = 'flex';
+  }
+}
+function saveWeeklyWeight() {
+  const val = parseFloat(document.getElementById('weekly-weight-input').value);
+  if (!val) { alert('체중을 입력해주세요!'); return; }
+  const w = getWeightData(currentUser);
+  if (!w.weights) w.weights = {};
+  w.weights[getWeekKey(0)] = val;
+  saveWeightData(currentUser, w);
+  localStorage.setItem('diet_weight_checked_' + currentUser, getWeekKey(0));
+  document.getElementById('weight-overlay').style.display = 'none';
+  render();
+}
+function skipWeeklyWeight() {
+  localStorage.setItem('diet_weight_checked_' + currentUser, getWeekKey(0));
+  document.getElementById('weight-overlay').style.display = 'none';
+}
+
+// ── 기록 ──
+function changeWeek(d) { weekOffset += d; if (apiUrl) fetchRemote(); else render(); }
+function selectDay(idx) { selectedDayIdx = idx; render(); }
+function toggleCheat() {
+  const state = loadLocal();
+  const wk = getWk(state, currentUser, weekOffset);
+  wk.cheat = !wk.cheat;
+  saveLocal(state);
+  syncToRemote(currentUser, getWeekKey(weekOffset) + '_cheat', wk.cheat ? 1 : 0);
+  render();
+}
+function toggleMealOk(slot) {
+  const state = loadLocal();
+  const wk = getWk(state, currentUser, weekOffset);
+  const idx = selectedDayIdx !== null ? selectedDayIdx : getTodayDayIdx();
+  const field = slot === 1 ? 'm1ok' : 'm2ok';
+  if (wk.days[idx][field] === undefined) wk.days[idx][field] = true;
+  wk.days[idx][field] = !wk.days[idx][field];
+  saveLocal(state);
+  syncToRemote(currentUser, getWeekKey(weekOffset) + '_d' + idx + '_' + field, wk.days[idx][field]);
+  updateMealToggleUI(idx, wk.days[idx]);
+  renderDotOnly();
+}
+
+function updateMealToggleUI(idx, day) {
+  const m1btn = document.getElementById('m1-toggle');
+  const m2btn = document.getElementById('m2-toggle');
+  if (!m1btn || !m2btn) return;
+  const m1ok = day.m1ok !== false;
+  const m2ok = day.m2ok !== false;
+  m1btn.textContent = m1ok ? '✅' : '❌';
+  m1btn.style.background = m1ok ? 'var(--green-lt)' : 'var(--red-lt)';
+  m1btn.style.color = m1ok ? 'var(--green-dk)' : 'var(--red-dk)';
+  m1btn.style.borderColor = m1ok ? 'var(--green)' : 'var(--red)';
+  m2btn.textContent = m2ok ? '✅' : '❌';
+  m2btn.style.background = m2ok ? 'var(--green-lt)' : 'var(--red-lt)';
+  m2btn.style.color = m2ok ? 'var(--green-dk)' : 'var(--red-dk)';
+  m2btn.style.borderColor = m2ok ? 'var(--green)' : 'var(--red)';
+}
+
+function saveMemo() {
+  const state = loadLocal();
+  const wk = getWk(state, currentUser, weekOffset);
+  const idx = selectedDayIdx !== null ? selectedDayIdx : getTodayDayIdx();
+  wk.days[idx].ex = document.getElementById('memo-ex').value;
+  wk.days[idx].m1 = document.getElementById('memo-m1').value;
+  wk.days[idx].m2 = document.getElementById('memo-m2').value;
+  saveLocal(state);
+  const wkKey = getWeekKey(weekOffset);
+  syncToRemote(currentUser, wkKey + '_d' + idx + '_ex', wk.days[idx].ex);
+  syncToRemote(currentUser, wkKey + '_d' + idx + '_m1', wk.days[idx].m1);
+  syncToRemote(currentUser, wkKey + '_d' + idx + '_m2', wk.days[idx].m2);
+  syncToRemote(currentUser, wkKey + '_d' + idx + '_m1ok', wk.days[idx].m1ok !== false);
+  syncToRemote(currentUser, wkKey + '_d' + idx + '_m2ok', wk.days[idx].m2ok !== false);
+  const btn = document.getElementById('save-btn');
+  btn.textContent = '저장됨 ✓'; btn.style.background = 'var(--green-dk)';
+  setTimeout(() => { btn.textContent = '저장'; btn.style.background = 'var(--blue)'; }, 1500);
+  renderDotOnly();
+}
+
+// ── 동기화 ──
+const apiUrl = API_URL;
+async function syncToRemote(member, dateKey, value) {
+  if (!apiUrl) return;
+  setSyncState('syncing');
+  try {
+    await fetch(apiUrl + '?action=set&member=' + encodeURIComponent(member) + '&dateKey=' + encodeURIComponent(dateKey) + '&value=' + encodeURIComponent(value), { mode: 'no-cors' });
+    setSyncState('ok');
+  } catch(e) { setSyncState('error'); }
+}
+async function fetchRemote() {
+  if (!apiUrl) return;
+  setSyncState('syncing');
+  try {
+    const res = await fetch(apiUrl + '?action=get');
+    const json = await res.json();
+    const remote = json.data || {};
+    const state = loadLocal();
+    for (const member of Object.keys(remote)) {
+      for (const [dateKey, value] of Object.entries(remote[member])) {
+        const wkKey = dateKey.split('_')[0];
+        const stateKey = member + '_' + wkKey;
+        if (!state[stateKey]) state[stateKey] = { days: Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''})), cheat: false };
+        if (!state[stateKey].days) state[stateKey].days = Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''}));
+        const p = dateKey.split('_');
+        if (dateKey.includes('_cheat')) {
+          state[stateKey].cheat = Number(value) === 1;
+        } else if (p.length >= 3) {
+          const d = parseInt(p[1].replace('d', ''));
+          const field = p[2];
+          if (!isNaN(d) && ['ex','m1','m2','m1ok','m2ok'].includes(field)) {
+            if (field === 'm1ok' || field === 'm2ok') {
+              state[stateKey].days[d][field] = (String(value) !== 'false' && String(value) !== '0');
+            } else {
+              state[stateKey].days[d][field] = String(value);
+            }
+          }
+        }
+      }
+    }
+    saveLocal(state); setSyncState('ok'); render();
+  } catch(e) { setSyncState('error'); }
+}
+function setSyncState(s) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  if (!dot) return;
+  dot.className = 'sync-dot' + (s === 'syncing' ? ' syncing' : s === 'error' ? ' error' : '');
+  txt.textContent = s === 'syncing' ? '동기화 중...' : s === 'error' ? '오프라인' : '동기화 완료';
+}
+
+// ── 달성률 카드 ──
+function renderAchievement() {
+  const state = loadLocal();
+  const w = getWeightData(currentUser);
+  const end = new Date(settings.endDate);
+  const start = new Date(end); start.setMonth(start.getMonth() - 1);
+  const now = new Date();
+  const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+  const passedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+
+  // 체중 변화
+  const weightEl = document.getElementById('ach-weight');
+  const weightSubEl = document.getElementById('ach-weight-sub');
+  if (w.startWeight) {
+    const weights = w.weights || {};
+    const keys = Object.keys(weights).sort();
+    const latest = keys.length > 0 ? weights[keys[keys.length - 1]] : w.startWeight;
+    const diff = latest - w.startWeight;
+    weightEl.textContent = (diff <= 0 ? '' : '+') + diff.toFixed(1) + 'kg';
+    weightEl.className = 'ach-value ' + (diff <= 0 ? 'green' : 'red');
+    weightSubEl.textContent = `${w.startWeight}kg → ${latest}kg (목표 ${w.goalWeight}kg)`;
+  } else {
+    weightEl.textContent = '-';
+    weightSubEl.textContent = '체중 미입력';
+  }
+
+  // 운동 달성률 (이번 달 전체)
+  let totalExDone = 0, totalExGoal = 0;
+  let totalMealDone = 0, totalMealTotal = 0;
+  let totalFine = 0;
+  for (let w2 = -4; w2 <= 0; w2++) {
+    const wk = getWk(state, currentUser, w2);
+    const pwk = getWk(state, currentUser, w2 - 1);
+    wk.days.forEach(d => {
+      if (isExDone(d)) totalExDone++;
+      totalExGoal++;
+      [d.m1, d.m2].forEach(m => {
+        if (m.trim() !== '') totalMealDone++;
+        totalMealTotal++;
+      });
+    });
+    totalFine += calcWeekFine(wk, pwk);
+  }
+  const exRate = totalExGoal > 0 ? Math.round(totalExDone / totalExGoal * 100) : 0;
+  const mealRate = totalMealTotal > 0 ? Math.round(totalMealDone / totalMealTotal * 100) : 0;
+
+  document.getElementById('ach-ex').textContent = exRate + '%';
+  document.getElementById('ach-ex-bar').style.width = exRate + '%';
+  document.getElementById('ach-meal').textContent = mealRate + '%';
+  document.getElementById('ach-meal-bar').style.width = mealRate + '%';
+  document.getElementById('ach-fine').textContent = totalFine.toLocaleString() + '원';
+  document.getElementById('ach-date').textContent = `종료까지 ${getDaysRemaining()}일`;
+}
+
+// ── 비교 메시지 ──
+function renderCompare() {
+  const state = loadLocal();
+  const friendName = currentUser === '예진' ? '지은' : '예진';
+  const todayIdx = getTodayDayIdx();
+
+  // 오늘 요일까지만 카운트
+  const myWk = getWk(state, currentUser, 0);
+  const friendWk = getWk(state, friendName, 0);
+  const myPrevWk = getWk(state, currentUser, -1);
+  const friendPrevWk = getWk(state, friendName, -1);
+
+  let myEx = 0, friendEx = 0;
+  for (let i = 0; i <= todayIdx; i++) {
+    if (isExDone(myWk.days[i])) myEx++;
+    if (isExDone(friendWk.days[i])) friendEx++;
+  }
+
+  // 오늘까지 발생 벌금
+  const myFineSoFar = myWk.days.slice(0, todayIdx + 1).reduce((s, d) => s + getMealFail(d), 0) * FINE +
+    Math.max(0, (myWk.cheat ? 1 : 0) + (myPrevWk.cheat ? 1 : 0) - 1) * FINE;
+  const friendFineSoFar = friendWk.days.slice(0, todayIdx + 1).reduce((s, d) => s + getMealFail(d), 0) * FINE +
+    Math.max(0, (friendWk.cheat ? 1 : 0) + (friendPrevWk.cheat ? 1 : 0) - 1) * FINE;
+
+  const exDiff = myEx - friendEx;
+  const fineDiff = myFineSoFar - friendFineSoFar;
+
+  const exEl = document.getElementById('cmp-ex');
+  if (exDiff > 0) { exEl.textContent = `${friendName}보다 ${exDiff}회 앞서고 있어요 🏃`; exEl.className = 'cmp-val win'; }
+  else if (exDiff < 0) { exEl.textContent = `${friendName}보다 ${Math.abs(exDiff)}회 뒤처지고 있어요 😅`; exEl.className = 'cmp-val lose'; }
+  else { exEl.textContent = `${friendName}이랑 동률이에요 🤝`; exEl.className = 'cmp-val draw'; }
+
+  const fineEl = document.getElementById('cmp-fine');
+  if (fineDiff < 0) { fineEl.textContent = `${friendName}보다 ${Math.abs(fineDiff).toLocaleString()}원 덜 내고 있어요 💚`; fineEl.className = 'cmp-val win'; }
+  else if (fineDiff > 0) { fineEl.textContent = `${friendName}보다 ${fineDiff.toLocaleString()}원 더 내고 있어요 💸`; fineEl.className = 'cmp-val lose'; }
+  else { fineEl.textContent = `${friendName}이랑 벌금 동률이에요 🤝`; fineEl.className = 'cmp-val draw'; }
+}
+
+// ── 도트만 업데이트 ──
+function renderDotOnly() {
+  const state = loadLocal();
+  const wk = getWk(state, currentUser, weekOffset);
+  const todayIdx = getTodayDayIdx();
+  const selIdx = selectedDayIdx !== null ? selectedDayIdx : todayIdx;
+  document.querySelectorAll('#day-grid .day-col').forEach((col, i) => {
+    const dot = col.querySelector('.day-dot');
+    const st = getDayStatus(wk.days[i]);
+    dot.className = 'day-dot' + (st === 'o' ? ' status-o' : st === 'tri' ? ' status-tri' : '');
+    if (i === selIdx) dot.classList.add('selected');
+    dot.textContent = st === 'o' ? 'O' : st === 'tri' ? '△' : '';
+  });
+}
+
+// ── 메인 렌더 ──
+function render() {
+  if (!currentUser || currentUser === 'admin') return;
+  document.getElementById('week-label').textContent = getWeekLabel(weekOffset);
+  const state = loadLocal();
+  const wk = getWk(state, currentUser, weekOffset);
+  const prevWk = getWk(state, currentUser, weekOffset - 1);
+  const friendName = currentUser === '예진' ? '지은' : '예진';
+  const friendWk = getWk(state, friendName, weekOffset);
+  const friendPrevWk = getWk(state, friendName, weekOffset - 1);
+  const todayIdx = getTodayDayIdx();
+  const isCurrentWk = isCurrentWeek();
+  const selIdx = selectedDayIdx !== null ? selectedDayIdx : todayIdx;
+
+  renderAchievement();
+  if (isCurrentWk) renderCompare();
+  document.getElementById('compare-msg').style.display = isCurrentWk ? 'flex' : 'none';
+
+  // 날짜 도트
+  const grid = document.getElementById('day-grid');
+  grid.innerHTML = '';
+  let exDone = 0;
+  wk.days.forEach((day, i) => {
+    const isToday = isCurrentWk && i === todayIdx;
+    const st = getDayStatus(day);
+    if (isExDone(day)) exDone++;
+    const col = document.createElement('div'); col.className = 'day-col';
+    col.onclick = () => selectDay(i);
+    const name = document.createElement('div');
+    name.className = 'day-name' + (isToday ? ' today' : '');
+    name.textContent = isToday ? '오늘' : DAYS[i];
+    const dot = document.createElement('div');
+    dot.className = 'day-dot' + (st === 'o' ? ' status-o' : st === 'tri' ? ' status-tri' : '') + (i === selIdx ? ' selected' : '');
+    dot.textContent = st === 'o' ? 'O' : st === 'tri' ? '△' : '';
+    col.appendChild(name); col.appendChild(dot);
+    grid.appendChild(col);
+  });
+
+  // 기록 카드
+  const card = document.getElementById('record-card');
+  card.className = 'record-card' + (isCurrentWk && selIdx === todayIdx ? ' active-card' : '');
+  document.getElementById('record-date').textContent = getDayLabel(weekOffset, selIdx);
+  const selDay = wk.days[selIdx];
+  const st = getDayStatus(selDay);
+  document.getElementById('record-status').textContent = st === 'o' ? 'O 완료' : st === 'tri' ? '△ 부분' : '';
+  const exEl = document.getElementById('memo-ex');
+  const m1El = document.getElementById('memo-m1');
+  const m2El = document.getElementById('memo-m2');
+  if (document.activeElement !== exEl) exEl.value = typeof selDay.ex === 'string' ? selDay.ex : '';
+  if (document.activeElement !== m1El) m1El.value = typeof selDay.m1 === 'string' ? selDay.m1 : '';
+  if (document.activeElement !== m2El) m2El.value = typeof selDay.m2 === 'string' ? selDay.m2 : '';
+  m1El.className = 'record-input' + (selDay.m1.trim() === '' && isCurrentWk && selIdx <= todayIdx ? ' empty-warn' : '');
+  m2El.className = 'record-input' + (selDay.m2.trim() === '' && isCurrentWk && selIdx <= todayIdx ? ' empty-warn' : '');
+  updateMealToggleUI(selIdx, selDay);
+
+  // 치팅
+  const totalCheat = (wk.cheat ? 1 : 0) + (prevWk.cheat ? 1 : 0);
+  const cheatOver = Math.max(0, totalCheat - 1);
+  const btn = document.getElementById('cheat-btn');
+  btn.className = 'cheat-chip' + (cheatOver > 0 ? ' over' : wk.cheat ? ' used' : '');
+  btn.textContent = wk.cheat ? (cheatOver > 0 ? '치팅 사용 (초과!)' : '치팅 사용') : '이번 주 치팅 사용';
+  document.getElementById('cheat-info').textContent = `이전 주 ${prevWk.cheat ? 1 : 0}회 사용`;
+
+  // 상대방
+  document.getElementById('friend-name').textContent = friendName + ' 현황';
+  const ff = calcWeekFine(friendWk, friendPrevWk);
+  const ffEl = document.getElementById('friend-fine');
+  ffEl.textContent = ff > 0 ? `예상 ${ff.toLocaleString()}원` : '벌금 없음';
+  ffEl.style.color = ff > 0 ? 'var(--red)' : 'var(--green-dk)';
+  const fg = document.getElementById('friend-grid');
+  fg.innerHTML = '';
+  friendWk.days.forEach((day, i) => {
+    const isToday = isCurrentWk && i === todayIdx;
+    const fst = getDayStatus(day);
+    const col = document.createElement('div'); col.className = 'friend-col';
+    const dn = document.createElement('div'); dn.className = 'friend-day';
+    dn.textContent = isToday ? '오늘' : DAYS[i];
+    if (isToday) dn.style.color = 'var(--blue)';
+    const dot = document.createElement('div');
+    dot.className = 'friend-dot' + (fst === 'o' ? ' status-o' : fst === 'tri' ? ' status-tri' : '');
+    dot.textContent = fst === 'o' ? 'O' : fst === 'tri' ? '△' : '';
+    col.appendChild(dn); col.appendChild(dot);
+    fg.appendChild(col);
+  });
+
+  // 벌금
+  const totalFine = calcWeekFine(wk, prevWk);
+  const fineEl = document.getElementById('fine-total');
+  fineEl.textContent = totalFine.toLocaleString() + '원';
+  fineEl.className = 'fine-amount' + (totalFine === 0 ? ' zero' : '');
+  const isConfirm = isSunday() && isCurrentWk;
+  document.getElementById('fine-label').textContent = isConfirm ? '이번 주 확정 벌금' : '이번 주 예상 벌금';
+  const tag = document.getElementById('fine-tag');
+  tag.textContent = isConfirm ? '오늘 정산일!' : '일요일에 확정';
+  tag.className = 'fine-tag ' + (isConfirm ? 'confirm' : 'estimate');
+}
+
+// ── 상대방 기록 뷰 ──
+function renderFriendView() {
+  const state = loadLocal();
+  const friendName = currentUser === '예진' ? '지은' : '예진';
+  const todayIdx = getTodayDayIdx();
+  const isCurrentWk = isCurrentWeek();
+
+  document.getElementById('friend-view-label').textContent = friendName + '의 이번 주 기록';
+
+  // 도트 그리드
+  const grid = document.getElementById('friend-view-grid');
+  grid.innerHTML = '';
+  const wk = getWk(state, friendName, weekOffset);
+  wk.days.forEach((day, i) => {
+    const isToday = isCurrentWk && i === todayIdx;
+    const st = getDayStatus(day);
+    const col = document.createElement('div'); col.className = 'day-col';
+    const name = document.createElement('div');
+    name.className = 'day-name' + (isToday ? ' today' : '');
+    name.textContent = isToday ? '오늘' : DAYS[i];
+    const dot = document.createElement('div');
+    dot.className = 'day-dot' + (st === 'o' ? ' status-o' : st === 'tri' ? ' status-tri' : '');
+    dot.textContent = st === 'o' ? 'O' : st === 'tri' ? '△' : '';
+    col.appendChild(name); col.appendChild(dot);
+    grid.appendChild(col);
+  });
+
+  // 날짜별 기록 카드 (전체)
+  const cards = document.getElementById('friend-view-cards');
+  cards.innerHTML = '';
+  wk.days.forEach((day, i) => {
+    const isToday = isCurrentWk && i === todayIdx;
+    const st = getDayStatus(day);
+    if (st === 'empty' && !(isCurrentWk && i <= todayIdx)) return;
+    const card = document.createElement('div');
+    card.style.cssText = 'margin:0 16px 10px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;';
+    const header = document.createElement('div');
+    header.style.cssText = 'padding:12px 14px 0;display:flex;align-items:center;justify-content:space-between;';
+    const dateEl = document.createElement('span');
+    dateEl.style.cssText = 'font-size:12px;font-weight:600;color:var(--blue);';
+    dateEl.textContent = getDayLabel(weekOffset, i);
+    const stEl = document.createElement('span');
+    stEl.style.cssText = 'font-size:11px;color:var(--muted);';
+    stEl.textContent = st === 'o' ? 'O 완료' : st === 'tri' ? '△ 부분' : '';
+    header.appendChild(dateEl); header.appendChild(stEl);
+
+    const fields = document.createElement('div');
+    fields.style.cssText = 'padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px;';
+
+    [['운동', day.ex], ['식단 1', day.m1], ['식단 2', day.m2]].forEach(([label, val]) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+      const lb = document.createElement('div');
+      lb.style.cssText = 'font-size:10px;color:var(--muted);font-weight:500;';
+      lb.textContent = label;
+      const vl = document.createElement('div');
+      vl.style.cssText = `padding:9px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);font-size:13px;color:${val.trim() ? 'var(--text)' : 'var(--muted)'};background:var(--bg);`;
+      if (label === '식단 1') {
+        const ok = day.m1ok !== false;
+        vl.textContent = (val.trim() || '미입력') + (val.trim() ? (ok ? ' ✅' : ' ❌') : '');
+      } else if (label === '식단 2') {
+        const ok = day.m2ok !== false;
+        vl.textContent = (val.trim() || '미입력') + (val.trim() ? (ok ? ' ✅' : ' ❌') : '');
+      } else {
+        vl.textContent = val.trim() || '미입력';
+      }
+      row.appendChild(lb); row.appendChild(vl);
+      fields.appendChild(row);
+    });
+
+    card.appendChild(header); card.appendChild(fields);
+    cards.appendChild(card);
+  });
+}
+
+// ── 월별 성과 ──
+function renderMonthly() {
+  const state = loadLocal();
+  const finesA = [], finesB = [];
+  for (let w = -4; w <= 0; w++) {
+    const wkA = getWk(state, '예진', w); const pwkA = getWk(state, '예진', w - 1);
+    const wkB = getWk(state, '지은', w); const pwkB = getWk(state, '지은', w - 1);
+    finesA.push(calcWeekFine(wkA, pwkA));
+    finesB.push(calcWeekFine(wkB, pwkB));
+  }
+  const ctx = document.getElementById('fine-chart').getContext('2d');
+  if (fineChart) fineChart.destroy();
+  fineChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['-4주', '-3주', '-2주', '지난주', '이번주'],
+      datasets: [
+        { label: '예진', data: finesA, backgroundColor: '#1B64DA', borderRadius: 6 },
+        { label: '지은', data: finesB, backgroundColor: '#6B4EFF', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { font: { family: 'Noto Sans KR', size: 11 }, boxWidth: 12 } } },
+      scales: {
+        y: { ticks: { callback: v => v + '원', font: { size: 10 } }, grid: { color: '#E8E6E1' } },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+      }
+    }
+  });
+
+  function calcMonth(member) {
+    let exDone = 0, mealFail = 0, cheatTotal = 0;
+    for (let w = -4; w <= 0; w++) {
+      const wk = getWk(state, member, w);
+      wk.days.forEach(d => { if (isExDone(d)) exDone++; mealFail += getMealFail(d); });
+      if (wk.cheat) cheatTotal++;
+    }
+    return { exDone, mealFail, cheatTotal };
+  }
+  const a = calcMonth('예진'); const b = calcMonth('지은');
+  const totalA = finesA.reduce((s, v) => s + v, 0);
+  const totalB = finesB.reduce((s, v) => s + v, 0);
+  const rows = [
+    ['운동 완료', a.exDone, b.exDone, false],
+    ['식단 실패', a.mealFail, b.mealFail, false],
+    ['치팅 횟수', a.cheatTotal, b.cheatTotal, false],
+    ['이달 벌금', totalA.toLocaleString() + '원', totalB.toLocaleString() + '원', false],
+    ['운동 승자', a.exDone > b.exDone ? '🏆 예진' : a.exDone < b.exDone ? '🏆 지은' : '🤝 동점', '', true],
+    ['식단 승자', a.mealFail < b.mealFail ? '🏆 예진' : a.mealFail > b.mealFail ? '🏆 지은' : '🤝 동점', '', true],
+    ['벌금 최소', totalA < totalB ? '💚 예진' : totalA > totalB ? '💚 지은' : '🤝 동점', '', true],
+  ];
+  document.getElementById('monthly-body').innerHTML = rows.map(([label, va, vb, isWinner]) =>
+    `<div class="compare-row ${isWinner ? 'highlight' : ''}">
+      <span>${label}</span>
+      <span class="val ${label === '이달 벌금' ? 'red' : ''}">${va}</span>
+      <span class="val ${label === '이달 벌금' ? 'red' : ''}">${vb || ''}</span>
+    </div>`
+  ).join('');
+}
+
+// ── 관리자 페이지 ──
+function loadAdminPage() {
+  document.getElementById('admin-api-url').value = apiUrl;
+  loadGuestList();
+  document.getElementById('admin-end-date').value = settings.endDate;
+  document.getElementById('admin-ex-goal').value = settings.exGoal;
+  document.getElementById('admin-guest-code').value = settings.guestCode || '';
+}
+async function fetchRemoteSettings() {
+  if (!apiUrl) return;
+  try {
+    const res = await fetch(apiUrl + '?action=getSettings');
+    const json = await res.json();
+    const data = json.data || {};
+    if (data.guestCode) settings.guestCode = data.guestCode;
+    if (data.endDate) settings.endDate = data.endDate;
+    if (data.exGoal) settings.exGoal = parseInt(data.exGoal);
+    saveSettings();
+  } catch(e) {}
+}
+
+function saveAdminSettings() {
+  settings.endDate = document.getElementById('admin-end-date').value || CHALLENGE_END;
+  settings.exGoal = parseInt(document.getElementById('admin-ex-goal').value) || 4;
+  settings.guestCode = document.getElementById('admin-guest-code').value.trim();
+  saveSettings();
+  // 구글 시트에도 저장
+  if (apiUrl) {
+    fetch(apiUrl + '?action=saveSettings&key=guestCode&value=' + encodeURIComponent(settings.guestCode), {mode:'no-cors'});
+    fetch(apiUrl + '?action=saveSettings&key=endDate&value=' + encodeURIComponent(settings.endDate), {mode:'no-cors'});
+    fetch(apiUrl + '?action=saveSettings&key=exGoal&value=' + encodeURIComponent(settings.exGoal), {mode:'no-cors'});
+  }
+  alert('저장됐어요!');
+}
+async function loadGuestList() {
+  const container = document.getElementById('guest-list');
+  if (!container) return;
+  container.innerHTML = '불러오는 중...';
+  try {
+    const res = await fetch(apiUrl + '?action=getGuests');
+    const json = await res.json();
+    const nicknames = json.nicknames || [];
+    if (nicknames.length === 0) {
+      container.innerHTML = '<div style="color:var(--muted);">등록된 게스트 없음</div>';
+      return;
+    }
+    container.innerHTML = nicknames.map(nick => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:14px;font-weight:500;">${nick}</span>
+        <button onclick="deleteGuest('${nick}')" style="padding:5px 12px;background:var(--red-lt);color:var(--red-dk);border:none;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-family:inherit;">삭제</button>
+      </div>
+    `).join('');
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--red);">불러오기 실패</div>';
+  }
+}
+
+async function deleteGuest(nick) {
+  if (!confirm(`"${nick}" 게스트의 모든 데이터를 삭제할까요?`)) return;
+  try {
+    await fetch(apiUrl + '?action=deleteGuest&nickname=' + encodeURIComponent(nick));
+    showToastAdmin('삭제됐어요');
+    loadGuestList();
+  } catch(e) { alert('삭제 실패'); }
+}
+
+function showToastAdmin(msg) { alert(msg); }
+
+function logoutAdmin() {
+  localStorage.removeItem('diet_current_user');
+  currentUser = null;
+  showPage('intro');
+}
+
+// ── 초기화 ──
+loadSettings();
+fetchRemoteSettings();
+const savedUser = localStorage.getItem('diet_current_user');
+if (savedUser === 'admin') {
+  currentUser = 'admin';
+  loadAdminPage();
+  showPage('admin');
+} else if (savedUser && MEMBERS.includes(savedUser)) {
+  currentUser = savedUser;
+  checkWeeklyWeight(savedUser);
+  enterMain();
+} else {
+  showPage('intro');
+}
+
+// Enter 키로 코드 입력
+document.getElementById('code-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitCode();
+});
+</script>
+</div>
+</body>
+</html>
