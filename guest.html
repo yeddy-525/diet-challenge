@@ -1093,7 +1093,7 @@ function renderFatigue() {
   });
   const allParts = [...new Set(routines.flatMap(r => r.parts))];
   if (allParts.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">루틴을 먼저 만들어주세요 💪</div>';
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;"> 운동을 입력해주세요 💪</div>';
     return;
   }
   const hasRecords = Object.keys(records).length > 0;
