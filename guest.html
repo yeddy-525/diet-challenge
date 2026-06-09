@@ -217,6 +217,45 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+<!-- 루틴 수정 오버레이 -->
+<div id="edit-routine-overlay" class="overlay" style="display:none;">
+  <div class="bottom-sheet">
+    <div class="sheet-title">루틴 수정</div>
+    <div class="sheet-field">
+      <label class="sheet-label">루틴 이름</label>
+      <input class="sheet-input" id="edit-routine-name" placeholder="루틴 이름" />
+    </div>
+    <div class="sheet-field">
+      <label class="sheet-label">운동 부위</label>
+      <div class="parts-grid" id="edit-parts-grid"></div>
+    </div>
+    <div class="sheet-field">
+      <label class="sheet-label">운동 목록</label>
+      <div id="edit-exercises-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <button class="add-exercise-trigger" onclick="showEditExerciseAdd()">+ 운동 추가</button>
+      <div id="edit-exercise-add" style="display:none;">
+        <div class="exercise-add-row">
+          <div class="ex-search-wrap">
+            <input class="ex-search-input" id="edit-ex-search" placeholder="운동 검색 또는 직접 입력" oninput="searchExercise('edit')" autocomplete="off" />
+            <div class="autocomplete-list" id="edit-autocomplete" style="display:none;"></div>
+          </div>
+          <div class="ex-nums">
+            <input class="ex-num-input" id="edit-ex-sets" type="number" placeholder="3" min="1" max="20" />
+            <span class="ex-unit">세트</span>
+            <input class="ex-num-input" id="edit-ex-reps" type="number" placeholder="10" min="1" max="100" />
+            <span class="ex-unit">회</span>
+            <input class="ex-num-input" id="edit-ex-weight" type="number" placeholder="0" min="0" max="500" />
+            <span class="ex-unit">kg</span>
+            <button class="ex-add-confirm" onclick="confirmEditExercise()">추가</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="sheet-btn" onclick="saveEditRoutine()">저장</button>
+    <button class="sheet-skip" onclick="document.getElementById('edit-routine-overlay').style.display='none'">취소</button>
+  </div>
+</div>
+
 <!-- 루틴 추가 오버레이 -->
 <div id="add-routine-overlay" class="overlay" style="display:none;">
   <div class="bottom-sheet">
@@ -572,7 +611,8 @@ function searchExercise(prefix) {
   const list = document.getElementById(prefix+'-autocomplete');
   const query = input.value.trim();
   if (!query) { list.style.display='none'; return; }
-  const parts = getSelectedParts(prefix==='setup'?'setup-parts-grid':'add-parts-grid');
+  const gridId = prefix==='setup'?'setup-parts-grid':prefix==='edit'?'edit-parts-grid':'add-parts-grid';
+  const parts = getSelectedParts(gridId);
   const exercises = getAllExercises(parts);
   const filtered = exercises.filter(e => e.includes(query)).slice(0, 8);
   if (filtered.length === 0) { list.style.display='none'; return; }
@@ -625,7 +665,7 @@ function confirmAddExercise() {
 }
 
 function renderTempExercises(prefix) {
-  const arr = prefix === 'setup' ? setupTempExercises : addTempExercises;
+  const arr = prefix === 'setup' ? setupTempExercises : prefix === 'edit' ? editTempExercises : addTempExercises;
   const container = document.getElementById(prefix+'-exercises-list');
   container.innerHTML = arr.map((ex, i) => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:white;border-radius:var(--radius-sm);border:1px solid var(--border);">
@@ -640,6 +680,7 @@ function renderTempExercises(prefix) {
 
 function removeTempExercise(prefix, idx) {
   if (prefix === 'setup') setupTempExercises.splice(idx, 1);
+  else if (prefix === 'edit') editTempExercises.splice(idx, 1);
   else addTempExercises.splice(idx, 1);
   renderTempExercises(prefix);
 }
@@ -919,7 +960,10 @@ function renderSettings() {
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">${r.parts.join(' · ')||'부위 미선택'} · 운동 ${r.exercises.length}개</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px;">${r.exercises.map(e=>`${e.name} ${e.sets}×${e.reps}×${e.weight}kg`).join(' / ')}</div>
       </div>
-      <button class="routine-del-btn" onclick="deleteRoutine(${i})">삭제</button>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <button onclick="openEditRoutine(${i})" style="padding:5px 12px;background:var(--blue-lt);color:var(--blue-dk);border:none;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-family:inherit;">수정</button>
+        <button class="routine-del-btn" onclick="deleteRoutine(${i})">삭제</button>
+      </div>
     </div>
   `).join('');
 }
@@ -943,6 +987,55 @@ function deleteRoutine(idx) {
   renderSettings();
   renderRoutineSelect();
   showToast('삭제됐어요');
+}
+
+let editRoutineIdx = null;
+let editTempExercises = [];
+
+function openEditRoutine(idx) {
+  editRoutineIdx = idx;
+  editTempExercises = JSON.parse(JSON.stringify(routines[idx].exercises));
+  document.getElementById('edit-routine-name').value = routines[idx].name;
+  renderPartsGrid('edit-parts-grid', routines[idx].parts);
+  renderTempExercises('edit');
+  document.getElementById('edit-exercise-add').style.display = 'none';
+  document.getElementById('edit-routine-overlay').style.display = 'flex';
+}
+
+function showEditExerciseAdd() {
+  document.getElementById('edit-exercise-add').style.display = 'block';
+  document.getElementById('edit-ex-search').focus();
+}
+
+function confirmEditExercise() {
+  const name = document.getElementById('edit-ex-search').value.trim();
+  const sets = parseInt(document.getElementById('edit-ex-sets').value) || 3;
+  const reps = parseInt(document.getElementById('edit-ex-reps').value) || 10;
+  const weight = parseFloat(document.getElementById('edit-ex-weight').value) || 0;
+  if (!name) { showToast('운동 이름을 입력해주세요!'); return; }
+  editTempExercises.push({ name, sets, reps, weight });
+  document.getElementById('edit-ex-search').value = '';
+  document.getElementById('edit-ex-sets').value = '';
+  document.getElementById('edit-ex-reps').value = '';
+  document.getElementById('edit-ex-weight').value = '';
+  document.getElementById('edit-exercise-add').style.display = 'none';
+  renderTempExercises('edit');
+}
+
+function saveEditRoutine() {
+  const name = document.getElementById('edit-routine-name').value.trim();
+  const parts = getSelectedParts('edit-parts-grid');
+  if (!name) { showToast('루틴 이름을 입력해주세요!'); return; }
+  // 이름 중복 확인 (자기 자신 제외)
+  const duplicate = routines.find((r,i) => r.name === name && i !== editRoutineIdx);
+  if (duplicate) { showToast('같은 이름의 루틴이 있어요!'); return; }
+  routines[editRoutineIdx] = { ...routines[editRoutineIdx], name, parts, exercises: [...editTempExercises] };
+  saveRoutinesLocal();
+  syncToRemote('routines', JSON.stringify(routines));
+  document.getElementById('edit-routine-overlay').style.display = 'none';
+  renderSettings();
+  renderRoutineSelect();
+  showToast('루틴이 수정됐어요 ✓');
 }
 
 function openAddRoutine() {
