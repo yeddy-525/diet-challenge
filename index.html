@@ -442,7 +442,11 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
       <button class="admin-btn" onclick="saveAdminSettings()">저장</button>
     </div>
     <div class="admin-card" style="margin-top:0;">
-      <div class="admin-card-title">게스트 관리</div>
+      <div class="admin-card-title">게스트 코드 관리</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input id="new-guest-code" placeholder="코드 입력 (예: abc123)" class="admin-input" style="flex:1;" />
+        <button onclick="addGuestCode()" style="padding:8px 14px;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;">추가</button>
+      </div>
       <div id="guest-list" style="margin-bottom:10px;font-size:13px;color:var(--muted);">불러오는 중...</div>
       <button onclick="loadGuestList()" style="padding:8px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:inherit;">새로고침</button>
     </div>
@@ -452,7 +456,7 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
 
 <script>
 // ── 상수 ──
-const API_URL = 'https://script.google.com/macros/s/AKfycbzSqbXqrN9saX6_LFI2SVZzP9hPjtcZ4W6JMEWMl4dSlejNjnJafXrOT-eyy57Gq39K/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbweh0eihGR17f18vFZ0Wmf6hjcWoNQA-eJD1cvVlmvkOa41Dke3UIJMuM3qKHFqQMiZ/exec';
 const ADMIN_CODE = '0525';
 const MEMBERS = ['예진', '지은'];
 const DAYS = ['월','화','수','목','금','토','일'];
@@ -608,8 +612,10 @@ function submitCode() {
   if (codeMode === "admin" && code === ADMIN_CODE) {
     currentUser = "admin"; localStorage.setItem("diet_current_user", "admin");
     loadAdminPage(); showPage("admin");
-  } else if (codeMode === "guest" && code === settings.guestCode && settings.guestCode) {
-    window.location.href = 'guest.html';
+  } else if (codeMode === "guest") {
+    // 시트에서 코드 검증
+    validateAndEnterGuest(code);
+    return;
   } else {
     err.textContent = "코드가 맞지 않아요.";
     setTimeout(() => { err.textContent = ""; }, 2000);
@@ -1200,17 +1206,22 @@ async function loadGuestList() {
   if (!container) return;
   container.innerHTML = '불러오는 중...';
   try {
-    const res = await fetch(apiUrl + '?action=getGuests');
+    const res = await fetch(apiUrl + '?action=getGuestCodes');
     const json = await res.json();
-    const nicknames = json.nicknames || [];
-    if (nicknames.length === 0) {
+    const codes = json.codes || [];
+    if (codes.length === 0) {
       container.innerHTML = '<div style="color:var(--muted);">등록된 게스트 없음</div>';
       return;
     }
-    container.innerHTML = nicknames.map(nick => `
+    container.innerHTML = codes.map(g => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:14px;font-weight:500;">${nick}</span>
-        <button onclick="deleteGuest('${nick}')" style="padding:5px 12px;background:var(--red-lt);color:var(--red-dk);border:none;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-family:inherit;">삭제</button>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">${g.code}</div>
+          <div style="font-size:11px;color:var(--muted);">${g.nickname ? '닉네임: '+g.nickname : '미등록'}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="deleteGuestCode('${g.code}')" style="padding:5px 12px;background:var(--red-lt);color:var(--red-dk);border:none;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-family:inherit;">삭제</button>
+        </div>
       </div>
     `).join('');
   } catch(e) {
@@ -1218,16 +1229,52 @@ async function loadGuestList() {
   }
 }
 
-async function deleteGuest(nick) {
-  if (!confirm(`"${nick}" 게스트의 모든 데이터를 삭제할까요?`)) return;
+async function addGuestCode() {
+  const code = document.getElementById('new-guest-code').value.trim();
+  if (!code) { alert('코드를 입력해주세요!'); return; }
   try {
-    await fetch(apiUrl + '?action=deleteGuest&nickname=' + encodeURIComponent(nick));
-    showToastAdmin('삭제됐어요');
+    const res = await fetch(apiUrl + '?action=addGuestCode&code=' + encodeURIComponent(code));
+    const json = await res.json();
+    if (json.ok) {
+      document.getElementById('new-guest-code').value = '';
+      loadGuestList();
+      alert('추가됐어요!');
+    } else {
+      alert(json.error || '추가 실패');
+    }
+  } catch(e) { alert('추가 실패'); }
+}
+
+async function deleteGuestCode(code) {
+  if (!confirm(`"${code}" 코드를 삭제할까요?\n게스트 기록 데이터는 유지돼요.`)) return;
+  try {
+    await fetch(apiUrl + '?action=deleteGuestCode&code=' + encodeURIComponent(code));
     loadGuestList();
+    alert('삭제됐어요');
   } catch(e) { alert('삭제 실패'); }
 }
 
 function showToastAdmin(msg) { alert(msg); }
+
+async function validateAndEnterGuest(code) {
+  const err = document.getElementById('intro-error');
+  err.textContent = '확인 중...';
+  try {
+    const res = await fetch(apiUrl + '?action=validateGuestCode&code=' + encodeURIComponent(code));
+    const json = await res.json();
+    if (json.valid) {
+      // 코드 로컬에 저장
+      localStorage.setItem('guest_code', code);
+      window.location.href = 'guest.html?code=' + encodeURIComponent(code);
+    } else {
+      err.textContent = '코드가 맞지 않아요.';
+      setTimeout(() => { err.textContent = ''; }, 2000);
+    }
+  } catch(e) {
+    err.textContent = '네트워크 오류. 다시 시도해주세요.';
+    setTimeout(() => { err.textContent = ''; }, 2000);
+  }
+}
 
 function logoutAdmin() {
   localStorage.removeItem('diet_current_user');

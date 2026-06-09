@@ -381,7 +381,12 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbzSqbXqrN9saX6_LFI2SVZzP9hPjtcZ4W6JMEWMl4dSlejNjnJafXrOT-eyy57Gq39K/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbweh0eihGR17f18vFZ0Wmf6hjcWoNQA-eJD1cvVlmvkOa41Dke3UIJMuM3qKHFqQMiZ/exec';
+// URL에서 코드 파라미터 가져오기
+function getCodeFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('code') || localStorage.getItem('guest_code') || null;
+}
 const ALL_PARTS = ['가슴','등','하체','어깨','팔','복근'];
 
 let nickname = null;
@@ -470,17 +475,52 @@ async function fetchRemote() {
 
 // ── 초기화 ──
 async function init() {
-  nickname = localStorage.getItem('guest_nickname');
+  const guestCode = getCodeFromURL();
   await fetchExerciseDB();
-  if (!nickname) {
-    document.getElementById('setup-end-date').value = '';
-    renderPartsGrid('setup-parts-grid', []);
-    document.getElementById('setup-overlay').style.display = 'flex';
+  
+  if (!guestCode) {
+    // 코드 없으면 index로
+    window.location.href = 'index.html';
     return;
   }
+  
+  // 로컬에 코드 저장
+  localStorage.setItem('guest_code', guestCode);
+  
+  // 시트에서 이 코드의 닉네임 확인
+  try {
+    const res = await fetch(API_URL + '?action=validateGuestCode&code=' + encodeURIComponent(guestCode));
+    const json = await res.json();
+    if (!json.valid) {
+      alert('유효하지 않은 코드예요.');
+      window.location.href = 'index.html';
+      return;
+    }
+    // 닉네임이 등록되어 있으면 그걸로 로그인
+    if (json.nickname) {
+      nickname = json.nickname;
+      localStorage.setItem('guest_nickname', nickname);
+    }
+  } catch(e) {
+    // 네트워크 오류시 로컬 닉네임 사용
+  }
+  
+  // 로컬 닉네임 확인
+  if (!nickname) nickname = localStorage.getItem('guest_nickname');
+  
+  if (!nickname) {
+    // 처음 접속 - 닉네임 입력 필요
+    document.getElementById('setup-overlay').style.display = 'flex';
+    renderPartsGrid('setup-parts-grid', []);
+    return;
+  }
+  
   profile = loadProfile();
   routines = loadRoutines();
   records = loadRecords();
+  
+  // 시트에서 데이터 불러오기 (최초 1회)
+  await fetchRemote();
   enterMain();
 }
 
@@ -636,7 +676,7 @@ function removeSetupRoutine(idx) {
   if (setupTempRoutines.length === 0) document.getElementById('setup-complete-btn').style.display = 'none';
 }
 
-function completeSetup() {
+async function completeSetup() {
   if (!nickname) { showToast('닉네임을 먼저 입력해주세요!'); return; }
   localStorage.setItem('guest_nickname', nickname);
   routines = setupTempRoutines.length > 0 ? setupTempRoutines : [];
@@ -644,6 +684,13 @@ function completeSetup() {
   saveRoutinesLocal();
   syncToRemote('profile', JSON.stringify(profile));
   syncToRemote('routines', JSON.stringify(routines));
+  // 코드에 닉네임 등록
+  const guestCode = localStorage.getItem('guest_code');
+  if (guestCode) {
+    try {
+      await fetch(API_URL + '?action=updateGuestNickname&code=' + encodeURIComponent(guestCode) + '&nickname=' + encodeURIComponent(nickname));
+    } catch(e) {}
+  }
   document.getElementById('setup-overlay').style.display = 'none';
   enterMain();
 }
@@ -654,7 +701,6 @@ function enterMain() {
   document.getElementById('main-nickname').textContent = nickname;
   updateSubText();
   checkExpired();
-  fetchRemote();
   render();
 }
 
@@ -671,7 +717,7 @@ function checkExpired() {
   if (days !== null && days <= 0) document.getElementById('expired-overlay').style.display = 'flex';
 }
 
-function logout() { localStorage.removeItem('guest_nickname'); window.location.reload(); }
+function logout() { localStorage.removeItem('guest_nickname'); localStorage.removeItem('guest_code'); window.location.href = 'index.html'; }
 
 function showTab(t, btn) {
   ['today','fatigue','settings'].forEach(tab => {
@@ -681,7 +727,6 @@ function showTab(t, btn) {
   if (btn) btn.classList.add('active');
   if (t==='fatigue') renderFatigue();
   if (t==='settings') renderSettings();
-  if (t==='today') fetchRemote();
 }
 
 // ── 렌더 ──
@@ -834,9 +879,10 @@ function renderFatigue() {
   });
   const allParts = [...new Set(routines.flatMap(r => r.parts))];
   if (allParts.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">기록이 없어요</div>';
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">루틴을 먼저 만들어주세요 💪</div>';
     return;
   }
+  const hasRecords = Object.keys(records).length > 0;
   container.innerHTML = allParts.map(part => {
     const lastDate = partLastDate[part];
     if (!lastDate) return `
