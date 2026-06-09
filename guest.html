@@ -307,13 +307,12 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <button class="logout-btn" onclick="logout()">로그아웃</button>
   </div>
   <nav class="tab-nav">
-    <button class="tab-btn active" onclick="showTab('today',this)">오늘 기록</button>
-    <button class="tab-btn" onclick="showTab('fatigue',this)">피로도</button>
+    <button class="tab-btn active" onclick="showTab('record',this)">기록</button>
     <button class="tab-btn" onclick="showTab('settings',this)">설정</button>
   </nav>
 
-  <!-- 오늘 기록 -->
-  <div id="tab-today">
+  <!-- 기록 탭 -->
+  <div id="tab-record">
     <div class="summary-bar">
       <div class="summary-text">
         <span>목표 <strong id="sum-goal" style="color:var(--blue);">-</strong></span>
@@ -326,62 +325,106 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <span class="sync-text" id="sync-text">로컬 저장</span>
     </div>
 
-    <!-- 루틴 선택 -->
+    <!-- 피로도 -->
+    <div class="card" style="margin-top:8px;">
+      <div class="card-header"><span class="card-title">부위별 피로도</span></div>
+      <div id="fatigue-container" style="padding:14px 0 6px;"></div>
+      <div style="padding:0 16px 12px;font-size:11px;color:var(--muted);">당일 100% → 3일 후 50% → 5일 후 0%</div>
+    </div>
+
+    <!-- 오늘 기록 -->
     <div class="card">
       <div class="card-header">
-        <span class="card-title">오늘 루틴 선택</span>
+        <span class="card-title">오늘 기록</span>
         <span style="font-size:11px;color:var(--muted);" id="today-date-label"></span>
       </div>
-      <div class="card-body">
-        <div class="routine-list" id="routine-select-list"></div>
-      </div>
-    </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
 
-    <!-- 운동 기록 -->
-    <div class="card" id="workout-card" style="display:none;">
-      <div class="card-header">
-        <span class="card-title" id="workout-card-title">운동 기록</span>
-      </div>
-      <div class="card-body">
-        <div class="exercise-list" id="today-exercise-list"></div>
-      </div>
-    </div>
-
-    <!-- 식단 + 메모 -->
-    <div class="card" id="meal-card" style="display:none;">
-      <div class="card-header"><span class="card-title">식단 & 메모</span></div>
-      <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
+        <!-- 루틴 선택 or 직접 추가 -->
         <div>
-          <div class="record-label">식단 1</div>
-          <div class="meal-row">
-            <input class="record-input" id="memo-m1" placeholder="첫 번째 식단" style="flex:1;" />
-            <button class="meal-toggle" id="m1-toggle" onclick="toggleMeal(1)">✅</button>
+          <div class="record-label" style="margin-bottom:8px;">운동</div>
+          <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <button id="mode-routine-btn" onclick="setWorkoutMode('routine')" style="flex:1;padding:8px;border-radius:var(--radius-sm);border:2px solid var(--blue);background:var(--blue-lt);color:var(--blue-dk);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;">루틴 선택</button>
+            <button id="mode-free-btn" onclick="setWorkoutMode('free')" style="flex:1;padding:8px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;">직접 추가</button>
+          </div>
+
+          <!-- 루틴 선택 모드 -->
+          <div id="mode-routine" style="display:block;">
+            <div class="routine-list" id="routine-select-list"></div>
+          </div>
+
+          <!-- 직접 추가 모드 -->
+          <div id="mode-free" style="display:none;">
+            <div id="free-exercise-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+            <button class="add-exercise-trigger" onclick="showFreeExerciseAdd()">+ 운동 추가</button>
+            <div id="free-exercise-add" style="display:none;">
+              <div class="exercise-add-row">
+                <div class="ex-search-wrap">
+                  <input class="ex-search-input" id="free-ex-search" placeholder="운동 검색 또는 직접 입력" oninput="searchExercise('free')" autocomplete="off" />
+                  <div class="autocomplete-list" id="free-autocomplete" style="display:none;"></div>
+                </div>
+                <div class="ex-nums">
+                  <input class="ex-num-input" id="free-ex-sets" type="number" placeholder="3" min="1" max="20" />
+                  <span class="ex-unit">세트</span>
+                  <input class="ex-num-input" id="free-ex-reps" type="number" placeholder="10" min="1" max="100" />
+                  <span class="ex-unit">회</span>
+                  <input class="ex-num-input" id="free-ex-weight" type="number" placeholder="0" min="0" max="500" />
+                  <span class="ex-unit">kg</span>
+                  <button class="ex-add-confirm" onclick="confirmFreeExercise()">추가</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- 운동 기록 (루틴 선택 시) -->
+        <div id="workout-card-inner" style="display:none;">
+          <div style="font-size:11px;font-weight:500;color:var(--blue);margin-bottom:6px;" id="workout-card-title"></div>
+          <div class="exercise-list" id="today-exercise-list"></div>
+        </div>
+
+        <!-- 식단 -->
         <div>
-          <div class="record-label">식단 2</div>
-          <div class="meal-row">
-            <input class="record-input" id="memo-m2" placeholder="두 번째 식단" style="flex:1;" />
-            <button class="meal-toggle" id="m2-toggle" onclick="toggleMeal(2)">✅</button>
+          <div class="record-label" style="margin-bottom:8px;">식단</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">아침</div>
+              <div class="meal-row">
+                <input class="record-input" id="memo-m1" placeholder="아침 식단" style="flex:1;" />
+                <button class="meal-toggle" id="m1-toggle" onclick="toggleMeal(1)">✅</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">점심</div>
+              <div class="meal-row">
+                <input class="record-input" id="memo-m2" placeholder="점심 식단" style="flex:1;" />
+                <button class="meal-toggle" id="m2-toggle" onclick="toggleMeal(2)">✅</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">저녁</div>
+              <div class="meal-row">
+                <input class="record-input" id="memo-m3" placeholder="저녁 식단" style="flex:1;" />
+                <button class="meal-toggle" id="m3-toggle" onclick="toggleMeal(3)">✅</button>
+              </div>
+            </div>
           </div>
         </div>
+
         <div>
-          <div class="record-label">메모</div>
+          <div class="record-label" style="margin-bottom:4px;">메모</div>
           <textarea class="record-input" id="memo-note" placeholder="오늘 컨디션, 특이사항 등" rows="2" style="resize:none;"></textarea>
         </div>
         <button class="save-btn" onclick="saveRecord()">저장</button>
       </div>
     </div>
-    <div style="padding-bottom:32px;"></div>
-  </div>
 
-  <!-- 피로도 -->
-  <div id="tab-fatigue" style="display:none;">
-    <div style="padding:16px 0 0;">
-      <div id="fatigue-container"></div>
-    </div>
-    <div style="padding:0 16px 32px;font-size:11px;color:var(--muted);">
-      ※ 당일 100% → 3일 후 50% → 5일 후 0%
+    <!-- 과거 기록 -->
+    <div class="card" style="margin-bottom:32px;">
+      <div class="card-header">
+        <span class="card-title">과거 기록</span>
+      </div>
+      <div id="past-records-list" style="padding:8px 0;"></div>
     </div>
   </div>
 
@@ -435,7 +478,9 @@ let records = {};
 let exerciseDB = {};
 let selectedRoutineIdx = null;
 let todayExercises = []; // 오늘 수정된 운동 목록
-let m1ok = true, m2ok = true;
+let m1ok = true, m2ok = true, m3ok = true;
+let workoutMode = 'routine';
+let freeExercises = [];
 let setupTempExercises = [];
 let addTempExercises = [];
 let setupTempRoutines = [];
@@ -611,8 +656,8 @@ function searchExercise(prefix) {
   const list = document.getElementById(prefix+'-autocomplete');
   const query = input.value.trim();
   if (!query) { list.style.display='none'; return; }
-  const gridId = prefix==='setup'?'setup-parts-grid':prefix==='edit'?'edit-parts-grid':'add-parts-grid';
-  const parts = getSelectedParts(gridId);
+  const gridId = prefix==='setup'?'setup-parts-grid':prefix==='edit'?'edit-parts-grid':prefix==='free'?null:'add-parts-grid';
+  const parts = gridId ? getSelectedParts(gridId) : [];
   const exercises = getAllExercises(parts);
   const filtered = exercises.filter(e => e.includes(query)).slice(0, 8);
   if (filtered.length === 0) { list.style.display='none'; return; }
@@ -761,12 +806,12 @@ function checkExpired() {
 function logout() { localStorage.removeItem('guest_nickname'); localStorage.removeItem('guest_code'); window.location.href = 'index.html'; }
 
 function showTab(t, btn) {
-  ['today','fatigue','settings'].forEach(tab => {
+  ['record','settings'].forEach(tab => {
     document.getElementById('tab-'+tab).style.display = tab===t?'block':'none';
   });
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  if (t==='fatigue') renderFatigue();
+  if (t==='record') { renderFatigue(); renderPastRecords(); }
   if (t==='settings') renderSettings();
 }
 
@@ -780,6 +825,8 @@ function render() {
   document.getElementById('today-date-label').textContent = `${d.getMonth()+1}/${d.getDate()} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
   renderRoutineSelect();
   loadTodayRecord();
+  renderFatigue();
+  renderPastRecords();
 }
 
 function renderRoutineSelect() {
@@ -868,37 +915,110 @@ function loadTodayRecord() {
   }
   document.getElementById('memo-m1').value = rec.m1 || '';
   document.getElementById('memo-m2').value = rec.m2 || '';
+  if (document.getElementById('memo-m3')) document.getElementById('memo-m3').value = rec.m3 || '';
   document.getElementById('memo-note').value = rec.note || '';
   m1ok = rec.m1ok !== false;
   m2ok = rec.m2ok !== false;
+  m3ok = rec.m3ok !== false;
   updateMealToggleUI();
+  // 워크아웃 모드 복원
+  if (rec.workoutMode === 'free') {
+    setWorkoutMode('free');
+    freeExercises = JSON.parse(JSON.stringify(rec.exercises || []));
+    renderFreeExercises();
+  }
 }
 
 function toggleMeal(slot) {
-  if (slot===1) m1ok=!m1ok; else m2ok=!m2ok;
+  if (slot===1) m1ok=!m1ok;
+  else if (slot===2) m2ok=!m2ok;
+  else m3ok=!m3ok;
   updateMealToggleUI();
 }
 function updateMealToggleUI() {
   const m1btn = document.getElementById('m1-toggle');
   const m2btn = document.getElementById('m2-toggle');
+  const m3btn = document.getElementById('m3-toggle');
   if (!m1btn) return;
   m1btn.textContent = m1ok?'✅':'❌'; m1btn.className = 'meal-toggle'+(m1ok?'':' fail');
   m2btn.textContent = m2ok?'✅':'❌'; m2btn.className = 'meal-toggle'+(m2ok?'':' fail');
+  if (m3btn) { m3btn.textContent = m3ok?'✅':'❌'; m3btn.className = 'meal-toggle'+(m3ok?'':' fail'); }
+}
+
+function setWorkoutMode(mode) {
+  workoutMode = mode;
+  document.getElementById('mode-routine').style.display = mode==='routine'?'block':'none';
+  document.getElementById('mode-free').style.display = mode==='free'?'block':'none';
+  document.getElementById('mode-routine-btn').style.cssText = mode==='routine'?'flex:1;padding:8px;border-radius:var(--radius-sm);border:2px solid var(--blue);background:var(--blue-lt);color:var(--blue-dk);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;':'flex:1;padding:8px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;';
+  document.getElementById('mode-free-btn').style.cssText = mode==='free'?'flex:1;padding:8px;border-radius:var(--radius-sm);border:2px solid var(--blue);background:var(--blue-lt);color:var(--blue-dk);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;':'flex:1;padding:8px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;';
+}
+
+function showFreeExerciseAdd() {
+  document.getElementById('free-exercise-add').style.display = 'block';
+  document.getElementById('free-ex-search').focus();
+}
+
+function confirmFreeExercise() {
+  const name = document.getElementById('free-ex-search').value.trim();
+  const sets = parseInt(document.getElementById('free-ex-sets').value) || 3;
+  const reps = parseInt(document.getElementById('free-ex-reps').value) || 10;
+  const weight = parseFloat(document.getElementById('free-ex-weight').value) || 0;
+  if (!name) { showToast('운동 이름을 입력해주세요!'); return; }
+  freeExercises.push({ name, sets, reps, weight });
+  document.getElementById('free-ex-search').value = '';
+  document.getElementById('free-ex-sets').value = '';
+  document.getElementById('free-ex-reps').value = '';
+  document.getElementById('free-ex-weight').value = '';
+  document.getElementById('free-exercise-add').style.display = 'none';
+  renderFreeExercises();
+}
+
+function renderFreeExercises() {
+  const list = document.getElementById('free-exercise-list');
+  if (!list) return;
+  list.innerHTML = freeExercises.map((ex, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);">
+      <div>
+        <div style="font-size:13px;font-weight:500;">${ex.name}</div>
+        <div style="font-size:11px;color:var(--muted);">${ex.sets}세트 × ${ex.reps}회 × ${ex.weight}kg</div>
+      </div>
+      <button onclick="removeFreeExercise(${i})" style="background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;">×</button>
+    </div>
+  `).join('');
+}
+
+function removeFreeExercise(idx) {
+  freeExercises.splice(idx, 1);
+  renderFreeExercises();
 }
 
 function saveRecord() {
-  if (selectedRoutineIdx === null) { showToast('루틴을 선택해주세요!'); return; }
   if (!navigator.onLine) { showToast('네트워크가 없어요!'); return; }
-  const routine = routines[selectedRoutineIdx];
+  let routineName = '자유 운동', routineParts = [], exercises = [];
+  if (workoutMode === 'routine') {
+    if (selectedRoutineIdx === null) { showToast('루틴을 선택해주세요!'); return; }
+    const routine = routines[selectedRoutineIdx];
+    routineName = routine.name;
+    routineParts = routine.parts;
+    exercises = todayExercises;
+  } else {
+    exercises = freeExercises;
+    // 부위는 운동DB에서 추론
+    routineParts = [...new Set(exercises.flatMap(ex => {
+      return Object.entries(exerciseDB).filter(([p, names]) => names.includes(ex.name)).map(([p]) => p);
+    }))];
+  }
   const rec = {
-    routineIdx: selectedRoutineIdx,
-    routineName: routine.name,
-    routineParts: routine.parts,
-    exercises: todayExercises,
+    workoutMode,
+    routineIdx: workoutMode==='routine' ? selectedRoutineIdx : null,
+    routineName,
+    routineParts,
+    exercises,
     m1: document.getElementById('memo-m1').value,
     m2: document.getElementById('memo-m2').value,
+    m3: document.getElementById('memo-m3').value,
     note: document.getElementById('memo-note').value,
-    m1ok, m2ok,
+    m1ok, m2ok, m3ok,
     savedAt: new Date().toISOString()
   };
   records[today()] = rec;
@@ -908,6 +1028,59 @@ function saveRecord() {
 }
 
 // ── 피로도 ──
+function renderPastRecords() {
+  const container = document.getElementById('past-records-list');
+  if (!container) return;
+  const todayStr = today();
+  const pastDates = Object.keys(records).filter(d => d !== todayStr).sort().reverse();
+  if (pastDates.length === 0) {
+    container.innerHTML = '<div style="padding:16px;text-align:center;font-size:13px;color:var(--muted);">과거 기록이 없어요</div>';
+    return;
+  }
+  container.innerHTML = pastDates.map(date => {
+    const rec = records[date];
+    const d = new Date(date);
+    const dayName = ['일','월','화','수','목','금','토'][d.getDay()];
+    const label = `${d.getMonth()+1}/${d.getDate()} (${dayName})`;
+    return `
+    <div style="border-bottom:1px solid var(--border);">
+      <div onclick="togglePastRecord('${date}')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;">
+        <div>
+          <div style="font-size:13px;font-weight:500;">${label}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${rec.routineName||'자유 운동'} · 운동 ${(rec.exercises||[]).length}개</div>
+        </div>
+        <span style="color:var(--muted);font-size:16px;" id="past-arrow-${date}">›</span>
+      </div>
+      <div id="past-detail-${date}" style="display:none;padding:0 16px 14px;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${(rec.exercises||[]).map(ex => `
+            <div style="padding:8px 10px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);">
+              <div style="font-size:13px;font-weight:500;">${ex.name}</div>
+              <div style="font-size:11px;color:var(--muted);">${ex.sets}세트 × ${ex.reps}회 × ${ex.weight}kg</div>
+            </div>
+          `).join('')}
+          ${rec.m1 ? `<div style="font-size:12px;color:var(--muted);">아침: ${rec.m1} ${rec.m1ok!==false?'✅':'❌'}</div>` : ''}
+          ${rec.m2 ? `<div style="font-size:12px;color:var(--muted);">점심: ${rec.m2} ${rec.m2ok!==false?'✅':'❌'}</div>` : ''}
+          ${rec.m3 ? `<div style="font-size:12px;color:var(--muted);">저녁: ${rec.m3} ${rec.m3ok!==false?'✅':'❌'}</div>` : ''}
+          ${rec.note ? `<div style="font-size:12px;color:var(--muted);">메모: ${rec.note}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function togglePastRecord(date) {
+  const detail = document.getElementById('past-detail-'+date);
+  const arrow = document.getElementById('past-arrow-'+date);
+  if (detail.style.display === 'none') {
+    detail.style.display = 'block';
+    arrow.textContent = '⌄';
+  } else {
+    detail.style.display = 'none';
+    arrow.textContent = '›';
+  }
+}
+
 function renderFatigue() {
   const container = document.getElementById('fatigue-container');
   const partLastDate = {};
