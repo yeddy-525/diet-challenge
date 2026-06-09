@@ -533,7 +533,8 @@ function getDayStatus(day) {
   return filled === 3 ? 'o' : filled > 0 ? 'tri' : 'empty';
 }
 function isExDone(day) { return day.ex.trim() !== ''; }
-function getMealFail(day) {
+function getMealFail(day, isCheatDay) {
+  if (isCheatDay) return 0; // 치팅 날은 식단 벌금 면제
   let fail = 0;
   if (day.m1.trim() === '' || day.m1ok === false) fail++;
   if (day.m2.trim() === '' || day.m2ok === false) fail++;
@@ -541,7 +542,11 @@ function getMealFail(day) {
 }
 function calcWeekFine(wk, prevWk) {
   const exDone = wk.days.filter(d => isExDone(d)).length;
-  const mealFail = wk.days.reduce((s, d) => s + getMealFail(d), 0);
+  // 치팅 사용 주의 마지막 날을 치팅 날로 처리 (주 단위라 날짜 특정 불가 — 식단 하루치 면제)
+  const cheatUsed = wk.cheat ? 1 : 0;
+  let mealFail = wk.days.reduce((s, d) => s + getMealFail(d, false), 0);
+  // 치팅 사용 시 식단 실패 2회(하루치) 면제
+  mealFail = Math.max(0, mealFail - (cheatUsed * 2));
   const cheatOver = Math.max(0, (wk.cheat ? 1 : 0) + (prevWk.cheat ? 1 : 0) - 1);
   return (Math.max(0, settings.exGoal - exDone) + mealFail + cheatOver) * FINE;
 }
@@ -847,31 +852,30 @@ function renderAchievement() {
     if (weightSubEl) weightSubEl.textContent = '체중 미입력';
   }
 
-  // 운동 달성률 (이번 달 전체)
-  let totalExDone = 0, totalExGoal = 0;
-  let totalMealDone = 0, totalMealTotal = 0;
-  let totalFine = 0;
-  for (let w2 = -4; w2 <= 0; w2++) {
-    const wk = getWk(state, currentUser, w2);
-    const pwk = getWk(state, currentUser, w2 - 1);
-    wk.days.forEach(d => {
-      if (isExDone(d)) totalExDone++;
-      totalExGoal++;
-      [d.m1, d.m2].forEach(m => {
-        if (m.trim() !== '') totalMealDone++;
-        totalMealTotal++;
-      });
+  // 이번 주 기준
+  const todayIdx = getTodayDayIdx();
+  const thisWk = getWk(state, currentUser, 0);
+  const prevWk2 = getWk(state, currentUser, -1);
+  let exDoneThis = 0, exGoalThis = 0;
+  let mealDoneThis = 0, mealTotalThis = 0;
+  thisWk.days.forEach((d, i) => {
+    if (isCurrentWeek() && i > todayIdx) return; // 아직 안 된 날 제외
+    if (isExDone(d)) exDoneThis++;
+    exGoalThis++;
+    [d.m1, d.m2].forEach(m => {
+      if (m.trim() !== '') mealDoneThis++;
+      mealTotalThis++;
     });
-    totalFine += calcWeekFine(wk, pwk);
-  }
-  const exRate = totalExGoal > 0 ? Math.round(totalExDone / totalExGoal * 100) : 0;
-  const mealRate = totalMealTotal > 0 ? Math.round(totalMealDone / totalMealTotal * 100) : 0;
+  });
+  const exRate = exGoalThis > 0 ? Math.round(exDoneThis / exGoalThis * 100) : 0;
+  const mealRate = mealTotalThis > 0 ? Math.round(mealDoneThis / mealTotalThis * 100) : 0;
+  const thisWeekFine = calcWeekFine(thisWk, prevWk2);
 
   document.getElementById('ach-ex').textContent = exRate + '%';
-  document.getElementById('ach-ex-bar').style.width = exRate + '%';
+  if (document.getElementById('ach-ex-bar')) document.getElementById('ach-ex-bar').style.width = exRate + '%';
   document.getElementById('ach-meal').textContent = mealRate + '%';
-  document.getElementById('ach-meal-bar').style.width = mealRate + '%';
-  document.getElementById('ach-fine').textContent = totalFine.toLocaleString() + '원';
+  if (document.getElementById('ach-meal-bar')) document.getElementById('ach-meal-bar').style.width = mealRate + '%';
+  document.getElementById('ach-fine').textContent = thisWeekFine.toLocaleString() + '원';
   document.getElementById('ach-date').textContent = `종료까지 ${getDaysRemaining()}일`;
 }
 
