@@ -1025,6 +1025,8 @@ function saveRecord() {
   saveRecordsLocal();
   syncToRemote('rec_'+today(), JSON.stringify(rec));
   showToast('저장됐어요 ✓');
+  renderFatigue();
+  renderPastRecords();
 }
 
 // ── 피로도 ──
@@ -1091,9 +1093,12 @@ function renderFatigue() {
       if (!partLastDate[part] || date > partLastDate[part]) partLastDate[part] = date;
     });
   });
-  const allParts = [...new Set(routines.flatMap(r => r.parts))];
+  // 루틴 부위 + 기록에서 실제 운동한 부위 모두 포함
+  const partsFromRoutines = routines.flatMap(r => r.parts);
+  const partsFromRecords = Object.values(records).flatMap(r => r.routineParts || []);
+  const allParts = [...new Set([...partsFromRoutines, ...partsFromRecords])];
   if (allParts.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;"> 운동을 입력해주세요 💪</div>';
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">루틴을 먼저 만들어주세요 💪</div>';
     return;
   }
   const hasRecords = Object.keys(records).length > 0;
