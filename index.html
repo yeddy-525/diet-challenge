@@ -474,11 +474,17 @@ let settings = { exGoal: 4, endDate: CHALLENGE_END, guestCode: '' };
 function getTodayDayIdx() { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; }
 function isCurrentWeek() { return weekOffset === 0; }
 function isSunday() { return new Date().getDay() === 0; }
+function toLocalDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
 function getWeekKey(offset) {
   const now = new Date(); const wd = now.getDay();
   const diff = wd === 0 ? -6 : 1 - wd;
   const mon = new Date(now); mon.setDate(now.getDate() + diff + offset * 7);
-  return mon.toISOString().slice(0, 10);
+  return toLocalDateStr(mon);
 }
 function getWeekLabel(offset) {
   const key = getWeekKey(offset); const mon = new Date(key);
