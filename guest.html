@@ -486,7 +486,13 @@ let addTempExercises = [];
 let setupTempRoutines = [];
 
 // ── 유틸 ──
-function today() { return new Date().toISOString().slice(0,10); }
+function toLocalDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+function today() { return toLocalDateStr(new Date()); }
 function getDaysLeft(endDate) {
   if (!endDate) return null;
   const end = new Date(endDate); end.setHours(23,59,59,0);
