@@ -903,11 +903,15 @@ function renderCompare() {
     if (isExDone(friendWk.days[i])) friendEx++;
   }
 
-  // 오늘까지 발생 벌금
-  const myFineSoFar = myWk.days.slice(0, todayIdx + 1).reduce((s, d) => s + getMealFail(d), 0) * FINE +
-    Math.max(0, (myWk.cheat ? 1 : 0) + (myPrevWk.cheat ? 1 : 0) - 1) * FINE;
-  const friendFineSoFar = friendWk.days.slice(0, todayIdx + 1).reduce((s, d) => s + getMealFail(d), 0) * FINE +
-    Math.max(0, (friendWk.cheat ? 1 : 0) + (friendPrevWk.cheat ? 1 : 0) - 1) * FINE;
+  // 오늘까지 발생 벌금 (치팅 사용 시 하루치 식단 면제 반영)
+  const myCheatUsed = myWk.cheat ? 1 : 0;
+  const friendCheatUsed = friendWk.cheat ? 1 : 0;
+  const myRawFail = myWk.days.slice(0, todayIdx + 1).reduce((s, d) => s + getMealFail(d), 0);
+  const friendRawFail = friendWk.days.slice(0, todayIdx + 1).reduce((s, d) => s + getMealFail(d), 0);
+  const myFineSoFar = Math.max(0, myRawFail - myCheatUsed * 2) * FINE +
+    Math.max(0, myCheatUsed + (myPrevWk.cheat ? 1 : 0) - 1) * FINE;
+  const friendFineSoFar = Math.max(0, friendRawFail - friendCheatUsed * 2) * FINE +
+    Math.max(0, friendCheatUsed + (friendPrevWk.cheat ? 1 : 0) - 1) * FINE;
 
   const exDiff = myEx - friendEx;
   const fineDiff = myFineSoFar - friendFineSoFar;
@@ -1145,7 +1149,9 @@ function renderMonthly() {
     let exDone = 0, mealFail = 0, cheatTotal = 0;
     for (let w = -4; w <= 0; w++) {
       const wk = getWk(state, member, w);
-      wk.days.forEach(d => { if (isExDone(d)) exDone++; mealFail += getMealFail(d); });
+      const rawFail = wk.days.reduce((s, d) => s + getMealFail(d), 0);
+      wk.days.forEach(d => { if (isExDone(d)) exDone++; });
+      mealFail += Math.max(0, rawFail - (wk.cheat ? 2 : 0));
       if (wk.cheat) cheatTotal++;
     }
     return { exDone, mealFail, cheatTotal };
