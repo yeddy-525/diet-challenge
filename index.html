@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1B64DA">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>YJ JE 다이어트 챌린지</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -295,6 +298,8 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
         <span>식단 <strong id="ach-meal" style="color:var(--blue);">0%</strong></span>
         <span style="color:var(--border);">·</span>
         <span>벌금 <strong id="ach-fine" style="color:var(--red);">0원</strong></span>
+        <span style="color:var(--border);">·</span>
+        <span>🔥 <strong id="ach-streak" style="color:var(--muted);">0일</strong></span>
       </div>
       <span style="font-size:11px;color:var(--muted);" id="ach-date"></span>
     </div>
@@ -883,6 +888,25 @@ function renderAchievement() {
   if (document.getElementById('ach-meal-bar')) document.getElementById('ach-meal-bar').style.width = mealRate + '%';
   document.getElementById('ach-fine').textContent = thisWeekFine.toLocaleString() + '원';
   document.getElementById('ach-date').textContent = `종료까지 ${getDaysRemaining()}일`;
+  const s = getStreak();
+  const streakEl = document.getElementById('ach-streak');
+  if (streakEl) {
+    streakEl.textContent = s + '일';
+    streakEl.style.color = s >= 7 ? 'var(--red)' : s >= 3 ? 'var(--amber-dk)' : s > 0 ? 'var(--blue)' : 'var(--muted)';
+  }
+}
+
+function getStreak() {
+  const state = loadLocal();
+  const todayIdx = getTodayDayIdx();
+  let streak = 0, wOff = 0, dIdx = todayIdx;
+  for (let i = 0; i < 56; i++) {
+    if (dIdx < 0) { wOff--; dIdx = 6; }
+    const wk = getWk(state, currentUser, wOff);
+    if (isExDone(wk.days[dIdx])) { streak++; dIdx--; }
+    else break;
+  }
+  return streak;
 }
 
 // ── 비교 메시지 ──
@@ -1324,6 +1348,11 @@ if (savedUser === 'admin') {
 document.getElementById('code-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') submitCode();
 });
+
+// 서비스 워커 등록 (PWA)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
 </script>
 </div>
 </body>
