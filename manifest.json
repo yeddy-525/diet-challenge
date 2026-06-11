@@ -1,6 +1,6 @@
 {
-  "name": "YJ JE 다이어트 챌린지",
-  "short_name": "다이어트",
+  "name": "몸짱대결",
+  "short_name": "몸짱대결",
   "description": "예진·지은 다이어트 챌린지 기록 앱",
   "start_url": "/diet-challenge/",
   "scope": "/diet-challenge/",
@@ -9,6 +9,7 @@
   "theme_color": "#1B64DA",
   "lang": "ko",
   "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
