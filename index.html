@@ -1020,7 +1020,7 @@ function getTotalConfirmedFine(state, member) {
       const dow = new Date(wk0.cheatDate).getDay();
       cheatDayIdx = dow === 0 ? 6 : dow - 1;
     }
-    for (let i = 0; i <= todayIdx; i++) {
+    for (let i = 0; i < todayIdx; i++) {
       if (i === cheatDayIdx) continue;
       total += getMealFail(wk0.days[i], false) * FINE;
     }
