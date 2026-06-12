@@ -1013,12 +1013,13 @@ function getTotalConfirmedFine(state, member) {
 function renderBattle() {
   const state = loadLocal();
   const friendName = currentUser === '예진' ? '지은' : '예진';
+  // getWk 호출 전에 계산 — getWk가 없는 주를 state에 초기화하면 확정 벌금에 잡힘
+  const myConfirmed = getTotalConfirmedFine(state, currentUser);
+  const frConfirmed = getTotalConfirmedFine(state, friendName);
   const myWk = getWk(state, currentUser, 0);
   const myPrevWk = getWk(state, currentUser, -1);
   const frWk = getWk(state, friendName, 0);
   const frPrevWk = getWk(state, friendName, -1);
-  const myConfirmed = getTotalConfirmedFine(state, currentUser);
-  const frConfirmed = getTotalConfirmedFine(state, friendName);
   const total = myConfirmed + frConfirmed;
 
   // 리드 메시지
