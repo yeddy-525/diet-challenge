@@ -90,14 +90,7 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
 .ach-bar-fill{height:100%;border-radius:999px;background:var(--blue);transition:width .4s;}
 .ach-sub{font-size:10px;color:var(--muted);margin-top:3px;}
 
-/* ── 비교 메시지 ── */
-.compare-msg{margin:0 16px 12px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;display:flex;flex-direction:column;gap:6px;}
-.cmp-row{display:flex;align-items:center;justify-content:space-between;}
-.cmp-label{font-size:12px;color:var(--muted);}
-.cmp-val{font-size:13px;font-weight:600;}
-.cmp-val.win{color:var(--green-dk);}
-.cmp-val.lose{color:var(--red);}
-.cmp-val.draw{color:var(--muted);}
+
 
 /* ── 섹션 ── */
 .section{padding:0 16px 12px;}
@@ -129,6 +122,32 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
 .record-input.empty-warn{border-color:var(--red);background:var(--red-lt);}
 .save-btn{margin:0 14px 14px;width:calc(100% - 28px);padding:10px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;transition:all .15s;}
 .save-btn:active{opacity:.85;}
+
+/* ── 대결 카드 ── */
+.battle-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);margin:0 16px 12px;padding:16px 16px 14px;}
+.battle-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;}
+.battle-lead{font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;line-height:1.4;}
+.battle-lead.clean{color:var(--green-dk);}
+.bbar-wrap{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.bbar-row{display:flex;align-items:center;gap:8px;}
+.bbar-name{font-size:12px;font-weight:600;width:26px;flex-shrink:0;color:var(--muted);}
+.bbar-track{flex:1;height:7px;background:var(--bg);border-radius:999px;overflow:hidden;}
+.bbar-fill{height:100%;border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.bbar-fill.losing{background:var(--red);}
+.bbar-fill.winning{background:var(--green);}
+.bbar-fill.tie{background:var(--amber);}
+.bbar-amt{font-size:12px;font-weight:700;width:54px;text-align:right;flex-shrink:0;}
+.bbar-amt.losing{color:var(--red);}
+.bbar-amt.winning{color:var(--green-dk);}
+.bbar-amt.tie{color:var(--amber-dk);}
+.battle-detail{display:grid;grid-template-columns:1fr 1px 1fr;gap:0;padding-top:14px;border-top:1px solid var(--border);}
+.bcol{padding:0 6px;display:flex;flex-direction:column;gap:5px;}
+.bcol-name{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:2px;letter-spacing:.02em;}
+.bcol-item{font-size:12px;font-weight:500;line-height:1.3;}
+.bcol-item.ok{color:var(--green-dk);}
+.bcol-item.warn{color:var(--amber-dk);}
+.bcol-item.bad{color:var(--red);}
+.bcol-div{background:var(--border);}
 
 /* ── 치팅 ── */
 .cheat-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -361,15 +380,26 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
       </div>
     </div>
 
-    <!-- 상대방 비교 메시지 -->
-    <div class="compare-msg" id="compare-msg">
-      <div class="cmp-row">
-        <span class="cmp-label">🏃 운동</span>
-        <span class="cmp-val" id="cmp-ex"></span>
+    <!-- 대결 카드 -->
+    <div class="battle-card" id="battle-card" style="display:none;">
+      <div class="battle-title">⚡ 이번 주 대결</div>
+      <div class="battle-lead" id="battle-lead"></div>
+      <div class="bbar-wrap" id="bbar-wrap">
+        <div class="bbar-row">
+          <span class="bbar-name" id="bbar-name-me"></span>
+          <div class="bbar-track"><div class="bbar-fill" id="bbar-me"></div></div>
+          <span class="bbar-amt" id="bbar-amt-me"></span>
+        </div>
+        <div class="bbar-row">
+          <span class="bbar-name" id="bbar-name-fr"></span>
+          <div class="bbar-track"><div class="bbar-fill" id="bbar-fr"></div></div>
+          <span class="bbar-amt" id="bbar-amt-fr"></span>
+        </div>
       </div>
-      <div class="cmp-row">
-        <span class="cmp-label">💸 벌금</span>
-        <span class="cmp-val" id="cmp-fine"></span>
+      <div class="battle-detail">
+        <div class="bcol" id="bcol-me"></div>
+        <div class="bcol-div"></div>
+        <div class="bcol" id="bcol-fr"></div>
       </div>
     </div>
 
@@ -933,46 +963,93 @@ function getStreak() {
   return streak;
 }
 
-// ── 비교 메시지 ──
-function renderCompare() {
+// ── 대결 카드 ──
+const CLEAN_MSGS = [
+  '이번 주 둘 다 클린 🔥 진짜 몸짱각',
+  '벌금 제로 클럽 🏆 이대로만 가줘',
+  '오 이거 실화냐 둘 다 완벽 ✨',
+  '클린위크 달성 💪 둘 다 레전드',
+  '벌금 없음 = 갓생 완료 🌟',
+  '이번 주 무적 모드 ⚡ 계속 달려',
+];
+function getWeekBreakdown(wk, isCurrentWk) {
+  const items = [];
+  const todayIdx = getTodayDayIdx();
+  const maxIdx = isCurrentWk ? todayIdx : 6;
+  const exDone = wk.days.filter(d => isExDone(d)).length;
+  const exShort = Math.max(0, settings.exGoal - exDone);
+  if (exShort > 0) items.push({ icon: '🏃', text: `운동 ${exShort}회 부족`, cls: 'bad' });
+  for (let i = 0; i <= maxIdx; i++) {
+    const day = wk.days[i];
+    if (day.m1ok === false || day.m2ok === false) {
+      items.push({ icon: '❌', text: `${DAYS[i]} 식단실패`, cls: 'bad' });
+    } else if (day.m1.trim() === '' || day.m2.trim() === '') {
+      items.push({ icon: '📋', text: `${DAYS[i]} 미기입`, cls: 'warn' });
+    }
+  }
+  return items;
+}
+function renderBattle() {
   const state = loadLocal();
   const friendName = currentUser === '예진' ? '지은' : '예진';
-  const todayIdx = getTodayDayIdx();
-
-  // 오늘 요일까지만 카운트
   const myWk = getWk(state, currentUser, 0);
-  const friendWk = getWk(state, friendName, 0);
   const myPrevWk = getWk(state, currentUser, -1);
-  const friendPrevWk = getWk(state, friendName, -1);
+  const frWk = getWk(state, friendName, 0);
+  const frPrevWk = getWk(state, friendName, -1);
+  const myFine = calcWeekFine(myWk, myPrevWk);
+  const frFine = calcWeekFine(frWk, frPrevWk);
+  const total = myFine + frFine;
 
-  let myEx = 0, friendEx = 0;
-  for (let i = 0; i <= todayIdx; i++) {
-    if (isExDone(myWk.days[i])) myEx++;
-    if (isExDone(friendWk.days[i])) friendEx++;
+  // 리드 메시지
+  const leadEl = document.getElementById('battle-lead');
+  if (total === 0) {
+    leadEl.textContent = CLEAN_MSGS[new Date().getDate() % CLEAN_MSGS.length];
+    leadEl.className = 'battle-lead clean';
+  } else if (myFine === frFine) {
+    leadEl.textContent = `현재 동점 🤝 둘 다 ${myFine.toLocaleString()}원`;
+    leadEl.className = 'battle-lead';
+  } else {
+    const loser = myFine > frFine ? currentUser : friendName;
+    const diff = Math.abs(myFine - frFine);
+    leadEl.textContent = `${loser}이 ${diff.toLocaleString()}원 더 쌓이는 중 💸`;
+    leadEl.className = 'battle-lead';
   }
 
-  // 오늘까지 발생 벌금 (치팅 사용 시 하루치 식단 면제 반영)
-  const myCheatUsed = myWk.cheat ? 1 : 0;
-  const friendCheatUsed = friendWk.cheat ? 1 : 0;
-  const myRawFail = myWk.days.slice(0, todayIdx + 1).reduce((s, d) => s + getMealFail(d), 0);
-  const friendRawFail = friendWk.days.slice(0, todayIdx + 1).reduce((s, d) => s + getMealFail(d), 0);
-  const myFineSoFar = Math.max(0, myRawFail - myCheatUsed * 2) * FINE +
-    Math.max(0, myCheatUsed + (myPrevWk.cheat ? 1 : 0) - 1) * FINE;
-  const friendFineSoFar = Math.max(0, friendRawFail - friendCheatUsed * 2) * FINE +
-    Math.max(0, friendCheatUsed + (friendPrevWk.cheat ? 1 : 0) - 1) * FINE;
+  // 바
+  const bbarWrap = document.getElementById('bbar-wrap');
+  if (total === 0) {
+    bbarWrap.style.display = 'none';
+  } else {
+    bbarWrap.style.display = 'flex';
+    const myPct = total > 0 ? Math.max(8, Math.round(myFine / total * 100)) : 0;
+    const frPct = total > 0 ? Math.max(8, Math.round(frFine / total * 100)) : 0;
+    const myCls = myFine > frFine ? 'losing' : myFine < frFine ? 'winning' : 'tie';
+    const frCls = frFine > myFine ? 'losing' : frFine < myFine ? 'winning' : 'tie';
+    document.getElementById('bbar-name-me').textContent = currentUser;
+    document.getElementById('bbar-me').className = `bbar-fill ${myCls}`;
+    document.getElementById('bbar-me').style.width = myPct + '%';
+    document.getElementById('bbar-amt-me').textContent = myFine.toLocaleString() + '원';
+    document.getElementById('bbar-amt-me').className = `bbar-amt ${myCls}`;
+    document.getElementById('bbar-name-fr').textContent = friendName;
+    document.getElementById('bbar-fr').className = `bbar-fill ${frCls}`;
+    document.getElementById('bbar-fr').style.width = frPct + '%';
+    document.getElementById('bbar-amt-fr').textContent = frFine.toLocaleString() + '원';
+    document.getElementById('bbar-amt-fr').className = `bbar-amt ${frCls}`;
+  }
 
-  const exDiff = myEx - friendEx;
-  const fineDiff = myFineSoFar - friendFineSoFar;
-
-  const exEl = document.getElementById('cmp-ex');
-  if (exDiff > 0) { exEl.textContent = `${friendName}보다 ${exDiff}회 앞서고 있어요 🏃`; exEl.className = 'cmp-val win'; }
-  else if (exDiff < 0) { exEl.textContent = `${friendName}보다 ${Math.abs(exDiff)}회 뒤처지고 있어요 😅`; exEl.className = 'cmp-val lose'; }
-  else { exEl.textContent = `${friendName}이랑 동률이에요 🤝`; exEl.className = 'cmp-val draw'; }
-
-  const fineEl = document.getElementById('cmp-fine');
-  if (fineDiff < 0) { fineEl.textContent = `${friendName}보다 ${Math.abs(fineDiff).toLocaleString()}원 덜 내고 있어요 💚`; fineEl.className = 'cmp-val win'; }
-  else if (fineDiff > 0) { fineEl.textContent = `${friendName}보다 ${fineDiff.toLocaleString()}원 더 내고 있어요 💸`; fineEl.className = 'cmp-val lose'; }
-  else { fineEl.textContent = `${friendName}이랑 벌금 동률이에요 🤝`; fineEl.className = 'cmp-val draw'; }
+  // 브레이크다운
+  function buildCol(el, name, items) {
+    el.innerHTML = `<div class="bcol-name">${name}</div>`;
+    if (items.length === 0) {
+      el.innerHTML += `<span class="bcol-item ok">✅ 이번 주 클린</span>`;
+    } else {
+      items.forEach(it => {
+        el.innerHTML += `<span class="bcol-item ${it.cls}">${it.icon} ${it.text}</span>`;
+      });
+    }
+  }
+  buildCol(document.getElementById('bcol-me'), currentUser, getWeekBreakdown(myWk, true));
+  buildCol(document.getElementById('bcol-fr'), friendName, getWeekBreakdown(frWk, true));
 }
 
 // ── 도트만 업데이트 ──
@@ -1005,8 +1082,8 @@ function render() {
   const selIdx = selectedDayIdx !== null ? selectedDayIdx : todayIdx;
 
   renderAchievement();
-  if (isCurrentWk) renderCompare();
-  document.getElementById('compare-msg').style.display = isCurrentWk ? 'flex' : 'none';
+  if (isCurrentWk) renderBattle();
+  document.getElementById('battle-card').style.display = isCurrentWk ? 'block' : 'none';
 
   // 날짜 도트
   const grid = document.getElementById('day-grid');
