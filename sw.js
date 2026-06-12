@@ -1,4 +1,4 @@
-const CACHE = 'diet-v2';
+const CACHE = 'diet-v3';
 const ASSETS = ['./', './index.html', './guest.html'];
 
 self.addEventListener('install', e => {
