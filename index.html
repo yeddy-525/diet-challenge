@@ -382,7 +382,7 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
 
     <!-- 대결 카드 -->
     <div class="battle-card" id="battle-card" style="display:none;">
-      <div class="battle-title">⚡ 이번 주 대결</div>
+      <div class="battle-title">⚡ 벌금 대결</div>
       <div class="battle-lead" id="battle-lead"></div>
       <div class="bbar-wrap" id="bbar-wrap">
         <div class="bbar-row">
@@ -979,15 +979,33 @@ function getWeekBreakdown(wk, isCurrentWk) {
   const exDone = wk.days.filter(d => isExDone(d)).length;
   const exShort = Math.max(0, settings.exGoal - exDone);
   if (exShort > 0) items.push({ icon: '🏃', text: `운동 ${exShort}회 부족`, cls: 'bad' });
+  // 치팅 사용 요일 인덱스
+  let cheatDayIdx = -1;
+  if (wk.cheatDate) {
+    const dow = new Date(wk.cheatDate).getDay();
+    cheatDayIdx = dow === 0 ? 6 : dow - 1;
+  }
   for (let i = 0; i <= maxIdx; i++) {
     const day = wk.days[i];
-    if (day.m1ok === false || day.m2ok === false) {
+    const hasMealIssue = day.m1ok === false || day.m2ok === false || day.m1.trim() === '' || day.m2.trim() === '';
+    if (i === cheatDayIdx && hasMealIssue) {
+      items.push({ icon: '🍔', text: `${DAYS[i]} 치팅사용`, cls: 'ok' });
+    } else if (day.m1ok === false || day.m2ok === false) {
       items.push({ icon: '❌', text: `${DAYS[i]} 식단실패`, cls: 'bad' });
     } else if (day.m1.trim() === '' || day.m2.trim() === '') {
       items.push({ icon: '📋', text: `${DAYS[i]} 미기입`, cls: 'warn' });
     }
   }
   return items;
+}
+function getTotalConfirmedFine(state, member) {
+  let total = 0;
+  for (let offset = -1; offset >= -26; offset--) {
+    const k = member + '_' + getWeekKey(offset);
+    if (!state[k]) continue;
+    total += calcWeekFine(getWk(state, member, offset), getWk(state, member, offset - 1));
+  }
+  return total;
 }
 function renderBattle() {
   const state = loadLocal();
@@ -996,48 +1014,50 @@ function renderBattle() {
   const myPrevWk = getWk(state, currentUser, -1);
   const frWk = getWk(state, friendName, 0);
   const frPrevWk = getWk(state, friendName, -1);
-  const myFine = calcWeekFine(myWk, myPrevWk);
-  const frFine = calcWeekFine(frWk, frPrevWk);
-  const total = myFine + frFine;
+  const myConfirmed = getTotalConfirmedFine(state, currentUser);
+  const frConfirmed = getTotalConfirmedFine(state, friendName);
+  const total = myConfirmed + frConfirmed;
 
   // 리드 메시지
   const leadEl = document.getElementById('battle-lead');
-  if (total === 0) {
+  const myCurrentFine = calcWeekFine(myWk, myPrevWk);
+  const frCurrentFine = calcWeekFine(frWk, frPrevWk);
+  if (myConfirmed === 0 && frConfirmed === 0 && myCurrentFine === 0 && frCurrentFine === 0) {
     leadEl.textContent = CLEAN_MSGS[new Date().getDate() % CLEAN_MSGS.length];
     leadEl.className = 'battle-lead clean';
-  } else if (myFine === frFine) {
-    leadEl.textContent = `현재 동점 🤝 둘 다 ${myFine.toLocaleString()}원`;
+  } else if (myConfirmed === frConfirmed) {
+    leadEl.textContent = myConfirmed === 0 ? '확정 벌금 없음 · 이번 주 주시 중 👀' : `확정 동점 🤝 각 ${myConfirmed.toLocaleString()}원`;
     leadEl.className = 'battle-lead';
   } else {
-    const loser = myFine > frFine ? currentUser : friendName;
-    const diff = Math.abs(myFine - frFine);
-    leadEl.textContent = `${loser}이 ${diff.toLocaleString()}원 더 쌓이는 중 💸`;
+    const loser = myConfirmed > frConfirmed ? currentUser : friendName;
+    const diff = Math.abs(myConfirmed - frConfirmed);
+    leadEl.textContent = `${loser}이 ${diff.toLocaleString()}원 더 내고 있어요 💸`;
     leadEl.className = 'battle-lead';
   }
 
-  // 바
+  // 바 (확정 벌금 기준)
   const bbarWrap = document.getElementById('bbar-wrap');
   if (total === 0) {
     bbarWrap.style.display = 'none';
   } else {
     bbarWrap.style.display = 'flex';
-    const myPct = total > 0 ? Math.max(8, Math.round(myFine / total * 100)) : 0;
-    const frPct = total > 0 ? Math.max(8, Math.round(frFine / total * 100)) : 0;
-    const myCls = myFine > frFine ? 'losing' : myFine < frFine ? 'winning' : 'tie';
-    const frCls = frFine > myFine ? 'losing' : frFine < myFine ? 'winning' : 'tie';
+    const myPct = Math.max(8, Math.round(myConfirmed / total * 100));
+    const frPct = Math.max(8, Math.round(frConfirmed / total * 100));
+    const myCls = myConfirmed > frConfirmed ? 'losing' : myConfirmed < frConfirmed ? 'winning' : 'tie';
+    const frCls = frConfirmed > myConfirmed ? 'losing' : frConfirmed < myConfirmed ? 'winning' : 'tie';
     document.getElementById('bbar-name-me').textContent = currentUser;
     document.getElementById('bbar-me').className = `bbar-fill ${myCls}`;
     document.getElementById('bbar-me').style.width = myPct + '%';
-    document.getElementById('bbar-amt-me').textContent = myFine.toLocaleString() + '원';
+    document.getElementById('bbar-amt-me').textContent = myConfirmed.toLocaleString() + '원';
     document.getElementById('bbar-amt-me').className = `bbar-amt ${myCls}`;
     document.getElementById('bbar-name-fr').textContent = friendName;
     document.getElementById('bbar-fr').className = `bbar-fill ${frCls}`;
     document.getElementById('bbar-fr').style.width = frPct + '%';
-    document.getElementById('bbar-amt-fr').textContent = frFine.toLocaleString() + '원';
+    document.getElementById('bbar-amt-fr').textContent = frConfirmed.toLocaleString() + '원';
     document.getElementById('bbar-amt-fr').className = `bbar-amt ${frCls}`;
   }
 
-  // 브레이크다운
+  // 브레이크다운 (이번 주 현황)
   function buildCol(el, name, items) {
     el.innerHTML = `<div class="bcol-name">${name}</div>`;
     if (items.length === 0) {
