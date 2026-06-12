@@ -998,16 +998,34 @@ function getWeekBreakdown(wk, isCurrentWk) {
   return items;
 }
 function getTotalConfirmedFine(state, member) {
+  const todayIdx = getTodayDayIdx();
   let total = 0;
+
+  // 지난 주까지 완료된 주 전체 벌금
   for (let offset = -1; offset >= -26; offset--) {
     const k = member + '_' + getWeekKey(offset);
     if (!state[k]) continue;
-    // getWk 대신 state 직접 읽기 — getWk는 없는 주를 초기화해서 다음 루프에서 집계되는 버그 발생
     const wk = state[k];
     const prevK = member + '_' + getWeekKey(offset - 1);
     const prevWk = state[prevK] || { days: Array(7).fill(null).map(() => ({ex:'',m1:'',m2:'',m1ok:true,m2ok:true})), cheat: false };
     total += calcWeekFine(wk, prevWk);
   }
+
+  // 이번 주 오늘까지 발생한 식단 실패 (운동은 주 끝나야 확정, 식단은 하루하루 확정)
+  const k0 = member + '_' + getWeekKey(0);
+  if (state[k0]) {
+    const wk0 = state[k0];
+    let cheatDayIdx = -1;
+    if (wk0.cheatDate) {
+      const dow = new Date(wk0.cheatDate).getDay();
+      cheatDayIdx = dow === 0 ? 6 : dow - 1;
+    }
+    for (let i = 0; i <= todayIdx; i++) {
+      if (i === cheatDayIdx) continue;
+      total += getMealFail(wk0.days[i], false) * FINE;
+    }
+  }
+
   return total;
 }
 function renderBattle() {
