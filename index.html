@@ -1011,7 +1011,8 @@ function getTotalConfirmedFine(state, member) {
     total += calcWeekFine(wk, prevWk);
   }
 
-  // 이번 주 오늘까지 발생한 식단 실패 (운동은 주 끝나야 확정, 식단은 하루하루 확정)
+  // 이번 주 오늘 이전까지 명시적으로 실패 처리된 식단만 확정
+  // 빈칸은 "아직 기입 안 함"일 수 있으므로 제외, ❌ 처리된 것만 확정 실패로 인정
   const k0 = member + '_' + getWeekKey(0);
   if (state[k0]) {
     const wk0 = state[k0];
@@ -1022,7 +1023,9 @@ function getTotalConfirmedFine(state, member) {
     }
     for (let i = 0; i < todayIdx; i++) {
       if (i === cheatDayIdx) continue;
-      total += getMealFail(wk0.days[i], false) * FINE;
+      const day = wk0.days[i];
+      if (day.m1ok === false) total += FINE;
+      if (day.m2ok === false) total += FINE;
     }
   }
 
