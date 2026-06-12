@@ -975,24 +975,17 @@ const CLEAN_MSGS = [
 function getWeekBreakdown(wk, isCurrentWk) {
   const items = [];
   const todayIdx = getTodayDayIdx();
-  const maxIdx = isCurrentWk ? todayIdx : 6;
-  const exDone = wk.days.filter(d => isExDone(d)).length;
-  const exShort = Math.max(0, settings.exGoal - exDone);
-  if (exShort > 0) items.push({ icon: '🏃', text: `운동 ${exShort}회 부족`, cls: 'bad' });
-  // 치팅 사용 요일 인덱스
+  const maxIdx = isCurrentWk ? todayIdx - 1 : 6;
   let cheatDayIdx = -1;
   if (wk.cheatDate) {
     const dow = new Date(wk.cheatDate).getDay();
     cheatDayIdx = dow === 0 ? 6 : dow - 1;
   }
   for (let i = 0; i <= maxIdx; i++) {
+    if (i === cheatDayIdx) continue;
     const day = wk.days[i];
-    if (i === cheatDayIdx) {
-      // 치팅 사용일은 식단 무관하게 완전 제외
-    } else if (day.m1ok === false || day.m2ok === false) {
+    if (day.m1ok === false || day.m2ok === false) {
       items.push({ icon: '❌', text: `${DAYS[i]} 식단실패`, cls: 'bad' });
-    } else if (day.m1.trim() === '' || day.m2.trim() === '') {
-      items.push({ icon: '📋', text: `${DAYS[i]} 미기입`, cls: 'warn' });
     }
   }
   return items;
