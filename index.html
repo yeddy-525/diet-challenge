@@ -135,6 +135,7 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
 .cheat-chip{padding:9px 18px;border-radius:999px;border:1.5px solid var(--border);background:var(--card);font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;letter-spacing:-0.01em;}
 .cheat-chip.used{background:var(--amber-lt);border-color:var(--amber);color:var(--amber-dk);}
 .cheat-chip.over{background:var(--red-lt);border-color:var(--red);color:var(--red);}
+.cheat-chip:disabled{opacity:.7;cursor:default;}
 .cheat-info{font-size:12px;color:var(--muted);}
 
 /* ── 벌금 배너 ── */
@@ -522,7 +523,7 @@ function saveSettings() { localStorage.setItem('diet_settings', JSON.stringify(s
 
 function getWk(state, member, offset) {
   const k = member + '_' + getWeekKey(offset);
-  if (!state[k]) state[k] = { days: Array(7).fill(null).map(() => ({ex:'',m1:'',m2:'',m1ok:true,m2ok:true})), cheat: false };
+  if (!state[k]) state[k] = { days: Array(7).fill(null).map(() => ({ex:'',m1:'',m2:'',m1ok:true,m2ok:true})), cheat: false, cheatDate: null };
   // 기존 데이터 마이그레이션: m1ok/m2ok 없으면 true로
   state[k].days.forEach(d => {
     if (d.m1ok === undefined) d.m1ok = true;
@@ -531,6 +532,8 @@ function getWk(state, member, offset) {
     if (typeof d.m2ok === 'string') d.m2ok = d.m2ok !== 'false' && d.m2ok !== '0';
   });
   if (!state[k].days) state[k].days = Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''}));
+  // cheatDate 마이그레이션: 기존 boolean cheat → 해당 주 월요일 날짜로
+  if (state[k].cheatDate === undefined) state[k].cheatDate = state[k].cheat ? getWeekKey(offset) : null;
   return state[k];
 }
 function getWeightData(member) {
@@ -712,12 +715,29 @@ function skipWeeklyWeight() {
 // ── 기록 ──
 function changeWeek(d) { weekOffset += d; if (apiUrl) fetchRemote(); else render(); }
 function selectDay(idx) { selectedDayIdx = idx; render(); }
+function getLastCheatDate(state, member) {
+  for (let i = 0; i >= -3; i--) {
+    const wk = getWk(state, member, i);
+    if (wk.cheatDate) return wk.cheatDate;
+  }
+  return null;
+}
+function isCheatAvailable(lastCheatDate) {
+  if (!lastCheatDate) return true;
+  const last = new Date(lastCheatDate); last.setHours(0,0,0,0);
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((now - last) / 86400000) >= 14;
+}
 function toggleCheat() {
   const state = loadLocal();
-  const wk = getWk(state, currentUser, weekOffset);
-  wk.cheat = !wk.cheat;
+  if (!isCheatAvailable(getLastCheatDate(state, currentUser))) return;
+  const wk = getWk(state, currentUser, 0);
+  const today = toLocalDateStr(new Date());
+  wk.cheatDate = today;
+  wk.cheat = true;
   saveLocal(state);
-  syncToRemote(currentUser, getWeekKey(weekOffset) + '_cheat', wk.cheat ? 1 : 0);
+  syncToRemote(currentUser, getWeekKey(0) + '_cheat', 1);
+  syncToRemote(currentUser, getWeekKey(0) + '_cheat_date', today);
   render();
 }
 function toggleMealOk(slot) {
@@ -806,8 +826,12 @@ async function fetchRemote() {
         if (!state[stateKey]) state[stateKey] = { days: Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''})), cheat: false };
         if (!state[stateKey].days) state[stateKey].days = Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''}));
         const p = dateKey.split('_');
-        if (dateKey.includes('_cheat')) {
+        if (dateKey.endsWith('_cheat_date')) {
+          state[stateKey].cheatDate = String(value);
+          state[stateKey].cheat = true;
+        } else if (dateKey.includes('_cheat')) {
           state[stateKey].cheat = Number(value) === 1;
+          if (!state[stateKey].cheatDate && state[stateKey].cheat) state[stateKey].cheatDate = wkKey;
         } else if (p.length >= 3) {
           const d = parseInt(p[1].replace('d', ''));
           const field = p[2];
@@ -1022,12 +1046,24 @@ function render() {
   updateMealToggleUI(selIdx, selDay);
 
   // 치팅
-  const totalCheat = (wk.cheat ? 1 : 0) + (prevWk.cheat ? 1 : 0);
-  const cheatOver = Math.max(0, totalCheat - 1);
+  const lastCheatDate = getLastCheatDate(state, currentUser);
+  const cheatAvail = isCheatAvailable(lastCheatDate);
   const btn = document.getElementById('cheat-btn');
-  btn.className = 'cheat-chip' + (cheatOver > 0 ? ' over' : wk.cheat ? ' used' : '');
-  btn.textContent = wk.cheat ? (cheatOver > 0 ? '치팅 사용 (초과!)' : '치팅 사용') : '이번 주 치팅 사용';
-  document.getElementById('cheat-info').textContent = `이전 주 ${prevWk.cheat ? 1 : 0}회 사용`;
+  if (lastCheatDate && !cheatAvail) {
+    const cd = new Date(lastCheatDate);
+    const cdNorm = new Date(lastCheatDate); cdNorm.setHours(0,0,0,0);
+    const nowNorm = new Date(); nowNorm.setHours(0,0,0,0);
+    const daysLeft = 14 - Math.round((nowNorm - cdNorm) / 86400000);
+    btn.className = 'cheat-chip used';
+    btn.textContent = `${cd.getMonth()+1}월 ${cd.getDate()}일 사용`;
+    btn.disabled = true;
+    document.getElementById('cheat-info').textContent = `${daysLeft}일 후 리셋`;
+  } else {
+    btn.className = 'cheat-chip';
+    btn.textContent = '이번 주 치팅 사용';
+    btn.disabled = false;
+    document.getElementById('cheat-info').textContent = '';
+  }
 
   // 상대방
   document.getElementById('friend-name').textContent = friendName + ' 현황';
