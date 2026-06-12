@@ -987,9 +987,8 @@ function getWeekBreakdown(wk, isCurrentWk) {
   }
   for (let i = 0; i <= maxIdx; i++) {
     const day = wk.days[i];
-    const hasMealIssue = day.m1ok === false || day.m2ok === false || day.m1.trim() === '' || day.m2.trim() === '';
-    if (i === cheatDayIdx && hasMealIssue) {
-      items.push({ icon: '🍔', text: `${DAYS[i]} 치팅사용`, cls: 'ok' });
+    if (i === cheatDayIdx) {
+      // 치팅 사용일은 식단 무관하게 완전 제외
     } else if (day.m1ok === false || day.m2ok === false) {
       items.push({ icon: '❌', text: `${DAYS[i]} 식단실패`, cls: 'bad' });
     } else if (day.m1.trim() === '' || day.m2.trim() === '') {
@@ -1003,7 +1002,11 @@ function getTotalConfirmedFine(state, member) {
   for (let offset = -1; offset >= -26; offset--) {
     const k = member + '_' + getWeekKey(offset);
     if (!state[k]) continue;
-    total += calcWeekFine(getWk(state, member, offset), getWk(state, member, offset - 1));
+    // getWk 대신 state 직접 읽기 — getWk는 없는 주를 초기화해서 다음 루프에서 집계되는 버그 발생
+    const wk = state[k];
+    const prevK = member + '_' + getWeekKey(offset - 1);
+    const prevWk = state[prevK] || { days: Array(7).fill(null).map(() => ({ex:'',m1:'',m2:'',m1ok:true,m2ok:true})), cheat: false };
+    total += calcWeekFine(wk, prevWk);
   }
   return total;
 }
