@@ -1,8 +1,31 @@
+// ── Firebase 메시지 수신 (백그라운드 알림) ──
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+
+if (!firebase.apps.length) {
+  firebase.initializeApp({
+    apiKey: 'YOUR_API_KEY',            // ← Firebase 콘솔 > 프로젝트 설정 > 일반 > 웹 앱에서 복사
+    projectId: 'diet-challenge-7cb23',
+    messagingSenderId: '672431991021',
+    appId: 'YOUR_APP_ID',              // ← Firebase 콘솔 > 프로젝트 설정 > 일반 > 웹 앱에서 복사
+  });
+}
+
+firebase.messaging().onBackgroundMessage(payload => {
+  const n = payload.notification || {};
+  self.registration.showNotification(n.title || '몸짱대결', {
+    body: n.body || '',
+    icon: 'https://yeddy-525.github.io/diet-challenge/icons/icon-192.png',
+    tag: 'diet-challenge',
+    requireInteraction: false,
+  });
+});
+
+// ── PWA 캐시 ──
 const CACHE = 'diet-v4';
 const ASSETS = ['./', './index.html', './guest.html'];
 
 self.addEventListener('install', e => {
-  // cache: 'reload' — HTTP 캐시 우회하고 네트워크에서 직접 가져옴
   e.waitUntil(
     caches.open(CACHE).then(c =>
       c.addAll(ASSETS.map(url => new Request(url, { cache: 'reload' })))
@@ -28,7 +51,6 @@ self.addEventListener('fetch', e => {
   const isHtml = url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname.endsWith('/');
 
   if (isHtml) {
-    // HTML은 항상 네트워크 우선 — 오프라인일 때만 캐시 폴백
     e.respondWith(
       fetch(e.request, { cache: 'no-cache' })
         .then(res => {
@@ -39,7 +61,6 @@ self.addEventListener('fetch', e => {
         .catch(() => caches.match(e.request))
     );
   } else {
-    // 나머지는 캐시 우선
     e.respondWith(
       caches.match(e.request).then(cached => {
         if (cached) return cached;

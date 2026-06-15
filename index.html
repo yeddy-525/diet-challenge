@@ -9,6 +9,8 @@
 <title>몸짱대결</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
 :root {
   --blue:#1B64DA;--blue-lt:#EBF2FF;--blue-dk:#0D4A9E;
@@ -494,6 +496,13 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
 // ── 상수 ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbxEmajFOuQdQLXgNrNaN4CAI-9DvtI8VSGFByxqw0qmQsvdhpnID6g1ltkdIaznMWhG/exec';
 const ADMIN_CODE = '0525';
+const FIREBASE_CONFIG = {
+  apiKey: 'YOUR_API_KEY',            // ← Firebase 콘솔 > 프로젝트 설정 > 일반 > 웹 앱에서 복사
+  projectId: 'diet-challenge-7cb23',
+  messagingSenderId: '672431991021',
+  appId: 'YOUR_APP_ID',              // ← Firebase 콘솔 > 프로젝트 설정 > 일반 > 웹 앱에서 복사
+};
+const VAPID_KEY = 'BNAeoMG2twT7N-jo_p3mtfeMEN3DIaZGDnKcpsCOeMhQeA4oj8YAA1fQ_qkxT1yUl-t8D2RrUXsJUi9Z4kRAZWo';
 const MEMBERS = ['예진', '지은'];
 const DAYS = ['월','화','수','목','금','토','일'];
 const FINE = 500;
@@ -505,6 +514,8 @@ let weekOffset = 0;
 let selectedDayIdx = null;
 let fineChart = null;
 let settings = { exGoal: 4, endDate: CHALLENGE_END, guestCode: '' };
+let fcmMessaging = null;
+let notifInitialized = false;
 
 // ── 유틸 ──
 function getTodayDayIdx() { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; }
@@ -697,6 +708,7 @@ function enterMain() {
   weekOffset = 0;
   if (apiUrl) fetchRemote();
   else render();
+  setTimeout(initNotifications, 800);
 }
 
 function changeUser() {
@@ -824,6 +836,7 @@ function saveMemo() {
   syncToRemote(currentUser, wkKey + '_d' + idx + '_m2', wk.days[idx].m2);
   syncToRemote(currentUser, wkKey + '_d' + idx + '_m1ok', wk.days[idx].m1ok !== false);
   syncToRemote(currentUser, wkKey + '_d' + idx + '_m2ok', wk.days[idx].m2ok !== false);
+  notifyFriend();
   const btn = document.getElementById('save-btn');
   btn.textContent = '저장됨 ✓'; btn.style.background = 'var(--green-dk)';
   setTimeout(() => { btn.textContent = '저장'; btn.style.background = 'var(--blue)'; }, 1500);
@@ -840,6 +853,39 @@ async function syncToRemote(member, dateKey, value) {
     setSyncState('ok');
   } catch(e) { setSyncState('error'); }
 }
+// ── 푸시 알림 ──
+async function initNotifications() {
+  if (notifInitialized) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    fcmMessaging = firebase.messaging();
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+    const swReg = await navigator.serviceWorker.ready;
+    const token = await fcmMessaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+    if (token && apiUrl) {
+      fetch(apiUrl + '?action=saveFcmToken&member=' + encodeURIComponent(currentUser) + '&token=' + encodeURIComponent(token), { mode: 'no-cors' });
+    }
+    fcmMessaging.onMessage(payload => {
+      const n = payload.notification || {};
+      new Notification(n.title || '몸짱대결', {
+        body: n.body || '',
+        icon: 'https://yeddy-525.github.io/diet-challenge/icons/icon-192.png',
+        tag: 'diet-challenge',
+      });
+    });
+    notifInitialized = true;
+  } catch(e) {}
+}
+
+async function notifyFriend() {
+  if (!apiUrl || !currentUser) return;
+  try {
+    fetch(apiUrl + '?action=notifyFriend&member=' + encodeURIComponent(currentUser), { mode: 'no-cors' });
+  } catch(e) {}
+}
+
 async function fetchRemote() {
   if (!apiUrl) return;
   setSyncState('syncing');

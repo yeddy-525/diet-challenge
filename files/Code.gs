@@ -32,6 +32,10 @@ function doGet(e) {
       output.setContent(JSON.stringify(saveSettings(e.parameter.key, e.parameter.value)));
     } else if (action === "getExerciseDB") {
       output.setContent(JSON.stringify(getExerciseDB()));
+    } else if (action === "saveFcmToken") {
+      output.setContent(JSON.stringify(saveFcmToken_(e.parameter.member, e.parameter.token)));
+    } else if (action === "notifyFriend") {
+      output.setContent(JSON.stringify(notifyFriend_(e.parameter.member)));
     } else {
       output.setContent(JSON.stringify({ error: "unknown action" }));
     }
@@ -209,4 +213,123 @@ function getExerciseDB() {
     data[part].push(name);
   }
   return { ok: true, data };
+}
+
+// ── FCM 푸시 알림 ──
+
+function getSettingValue_(key) {
+  const res = getSettings();
+  return String((res.data || {})[key] || '');
+}
+
+function saveFcmToken_(member, token) {
+  if (!member || !token) return { ok: false, error: 'missing params' };
+  return saveSettings('fcm_token_' + member, token);
+}
+
+function notifyFriend_(member) {
+  const friendName = member === '예진' ? '지은' : '예진';
+  const token = getSettingValue_('fcm_token_' + friendName);
+  if (!token) return { ok: true, skipped: 'no_token' };
+  try {
+    sendPush_(token, '몸짱대결 💪', member + '이 오늘 기록 남겼어 👀');
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, error: e.toString() };
+  }
+}
+
+function getAccessToken_() {
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty('FCM_PRIVATE_KEY');
+  if (!raw) throw new Error('FCM_PRIVATE_KEY not set in Script Properties');
+  const privateKey = raw.replace(/\\n/g, '\n');
+  const email = 'firebase-adminsdk-fbsvc@diet-challenge-7cb23.iam.gserviceaccount.com';
+  const now = Math.floor(Date.now() / 1000);
+  const header = Utilities.base64EncodeWebSafe(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).replace(/=+$/, '');
+  const jwtClaims = Utilities.base64EncodeWebSafe(JSON.stringify({
+    iss: email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now
+  })).replace(/=+$/, '');
+  const sig = Utilities.base64EncodeWebSafe(
+    Utilities.computeRsaSha256Signature(header + '.' + jwtClaims, privateKey)
+  ).replace(/=+$/, '');
+  const jwt = header + '.' + jwtClaims + '.' + sig;
+  const res = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    contentType: 'application/x-www-form-urlencoded',
+    payload: 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + encodeURIComponent(jwt)
+  });
+  return JSON.parse(res.getContentText()).access_token;
+}
+
+function sendPush_(token, title, body) {
+  const accessToken = getAccessToken_();
+  UrlFetchApp.fetch('https://fcm.googleapis.com/v1/projects/diet-challenge-7cb23/messages:send', {
+    method: 'POST',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + accessToken },
+    payload: JSON.stringify({
+      message: {
+        token: token,
+        notification: { title: title, body: body },
+        webpush: {
+          notification: {
+            icon: 'https://yeddy-525.github.io/diet-challenge/icons/icon-192.png',
+            tag: 'diet-challenge'
+          }
+        }
+      }
+    })
+  });
+}
+
+function getDayInfoKST_() {
+  const nowKST = new Date(Date.now() + 9 * 3600000);
+  const dow = nowKST.getUTCDay(); // 0=일, 1=월 ...
+  const dayIdx = dow === 0 ? 6 : dow - 1; // 월=0, 일=6
+  const diffToMon = dow === 0 ? -6 : 1 - dow;
+  const monKST = new Date(nowKST.getTime() + diffToMon * 86400000);
+  return { dayIdx: dayIdx, weekKey: monKST.toISOString().slice(0, 10), dow: dow };
+}
+
+// 매일 22:00 KST에 트리거로 실행 — 오늘 식단 미입력 멤버에게 알림 발송
+function checkAndSendReminders() {
+  var info = getDayInfoKST_();
+  if (info.dow === 0) return; // 일요일 제외
+  var sheet = getOrCreateSheet(SHEET_CHALLENGE);
+  var rows = sheet.getDataRange().getValues();
+  var data = {};
+  for (var i = 1; i < rows.length; i++) {
+    var m = rows[i][0], dk = rows[i][1], v = rows[i][2];
+    if (!m || !dk) continue;
+    if (!data[m]) data[m] = {};
+    data[m][dk] = v;
+  }
+  var members = ['예진', '지은'];
+  for (var j = 0; j < members.length; j++) {
+    var member = members[j];
+    var token = getSettingValue_('fcm_token_' + member);
+    if (!token) continue;
+    var md = data[member] || {};
+    var m1 = String(md[info.weekKey + '_d' + info.dayIdx + '_m1'] || '').trim();
+    var m2 = String(md[info.weekKey + '_d' + info.dayIdx + '_m2'] || '').trim();
+    if (!m1 || !m2) {
+      try {
+        sendPush_(token, '식단 기록 안 했잖아 🍽️', '오늘 식단 아직 안 썼어! 얼른 기록해 😤');
+      } catch(e) {}
+    }
+  }
+}
+
+// Apps Script 편집기에서 한 번만 실행 — 매일 22:00 KST 트리거 등록
+// (실행 전 Apps Script 프로젝트 설정 > 시간대를 "Asia/Seoul"로 변경 필요)
+function createReminderTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'checkAndSendReminders') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('checkAndSendReminders').timeBased().atHour(22).everyDays(1).create();
 }
