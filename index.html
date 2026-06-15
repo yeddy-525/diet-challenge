@@ -563,7 +563,7 @@ function getWk(state, member, offset) {
   });
   if (!state[k].days) state[k].days = Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''}));
   // cheatDate 마이그레이션: 기존 boolean cheat → 해당 주 월요일 날짜로
-  if (state[k].cheatDate === undefined) state[k].cheatDate = state[k].cheat ? getWeekKey(offset) : null;
+  if (state[k].cheatDate === undefined) state[k].cheatDate = null;
   return state[k];
 }
 function getWeightData(member) {
@@ -584,14 +584,24 @@ function getMealFail(day, isCheatDay) {
   if (day.m2.trim() === '' || day.m2ok === false) fail++;
   return fail;
 }
+function parseCheatDayIdx(cheatDate) {
+  if (!cheatDate) return -1;
+  // ISO 문자열("2026-06-12T...") 또는 "YYYY-MM-DD" 모두 날짜 부분만 추출 후 정오 기준으로 파싱 (타임존 경계 방지)
+  const d = new Date(String(cheatDate).slice(0, 10) + 'T12:00:00');
+  if (isNaN(d.getTime())) return -1;
+  const dow = d.getDay();
+  return dow === 0 ? 6 : dow - 1;
+}
 function calcWeekFine(wk, prevWk) {
   const exDone = wk.days.filter(d => isExDone(d)).length;
-  let cheatDayIdx = -1;
-  if (wk.cheatDate) {
-    const dow = new Date(wk.cheatDate).getDay();
-    cheatDayIdx = dow === 0 ? 6 : dow - 1;
+  const cheatDayIdx = parseCheatDayIdx(wk.cheatDate);
+  let mealFail;
+  if (wk.cheat && cheatDayIdx === -1) {
+    // cheatDate 없는 구 데이터: 하루치(2끼) 감면 fallback
+    mealFail = Math.max(0, wk.days.reduce((s, d) => s + getMealFail(d, false), 0) - 2);
+  } else {
+    mealFail = wk.days.reduce((s, d, i) => s + getMealFail(d, i === cheatDayIdx), 0);
   }
-  const mealFail = wk.days.reduce((s, d, i) => s + getMealFail(d, i === cheatDayIdx), 0);
   const cheatOver = Math.max(0, (wk.cheat ? 1 : 0) + (prevWk.cheat ? 1 : 0) - 1);
   return (Math.max(0, settings.exGoal - exDone) + mealFail + cheatOver) * FINE;
 }
@@ -858,11 +868,11 @@ async function fetchRemote() {
         if (!state[stateKey].days) state[stateKey].days = Array(7).fill(null).map(() => ({ex:'',m1:'',m2:''}));
         const p = dateKey.split('_');
         if (dateKey.endsWith('_cheat_date')) {
-          state[stateKey].cheatDate = String(value);
+          state[stateKey].cheatDate = String(value).slice(0, 10); // ISO 문자열이어도 날짜 부분만 추출
           state[stateKey].cheat = true;
         } else if (dateKey.includes('_cheat')) {
           state[stateKey].cheat = Number(value) === 1;
-          if (!state[stateKey].cheatDate && state[stateKey].cheat) state[stateKey].cheatDate = wkKey;
+          // cheatDate를 월요일 fallback으로 설정하지 않음 — _cheat_date 키가 없는 구 데이터용
         } else if (p.length >= 3) {
           const d = parseInt(p[1].replace('d', ''));
           const field = p[2];
@@ -977,11 +987,7 @@ function getWeekBreakdown(wk, isCurrentWk) {
   const items = [];
   const todayIdx = getTodayDayIdx();
   const maxIdx = isCurrentWk ? todayIdx - 1 : 6;
-  let cheatDayIdx = -1;
-  if (wk.cheatDate) {
-    const dow = new Date(wk.cheatDate).getDay();
-    cheatDayIdx = dow === 0 ? 6 : dow - 1;
-  }
+  const cheatDayIdx = parseCheatDayIdx(wk.cheatDate);
   for (let i = 0; i <= maxIdx; i++) {
     if (i === cheatDayIdx) continue;
     const day = wk.days[i];
@@ -1013,11 +1019,7 @@ function getTotalConfirmedFine(state, member) {
   const k0 = member + '_' + getWeekKey(0);
   if (state[k0]) {
     const wk0 = state[k0];
-    let cheatDayIdx = -1;
-    if (wk0.cheatDate) {
-      const dow = new Date(wk0.cheatDate).getDay();
-      cheatDayIdx = dow === 0 ? 6 : dow - 1;
-    }
+    const cheatDayIdx = parseCheatDayIdx(wk0.cheatDate);
     for (let i = 0; i < todayIdx; i++) {
       if (i === cheatDayIdx) continue;
       const day = wk0.days[i];
