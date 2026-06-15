@@ -586,11 +586,12 @@ function getMealFail(day, isCheatDay) {
 }
 function calcWeekFine(wk, prevWk) {
   const exDone = wk.days.filter(d => isExDone(d)).length;
-  // 치팅 사용 주의 마지막 날을 치팅 날로 처리 (주 단위라 날짜 특정 불가 — 식단 하루치 면제)
-  const cheatUsed = wk.cheat ? 1 : 0;
-  let mealFail = wk.days.reduce((s, d) => s + getMealFail(d, false), 0);
-  // 치팅 사용 시 식단 실패 2회(하루치) 면제
-  mealFail = Math.max(0, mealFail - (cheatUsed * 2));
+  let cheatDayIdx = -1;
+  if (wk.cheatDate) {
+    const dow = new Date(wk.cheatDate).getDay();
+    cheatDayIdx = dow === 0 ? 6 : dow - 1;
+  }
+  const mealFail = wk.days.reduce((s, d, i) => s + getMealFail(d, i === cheatDayIdx), 0);
   const cheatOver = Math.max(0, (wk.cheat ? 1 : 0) + (prevWk.cheat ? 1 : 0) - 1);
   return (Math.max(0, settings.exGoal - exDone) + mealFail + cheatOver) * FINE;
 }
