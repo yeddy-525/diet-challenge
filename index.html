@@ -985,8 +985,11 @@ function getWeekBreakdown(wk, isCurrentWk) {
   for (let i = 0; i <= maxIdx; i++) {
     if (i === cheatDayIdx) continue;
     const day = wk.days[i];
-    if (day.m1ok === false || day.m2ok === false) {
-      items.push({ icon: '❌', text: `${DAYS[i]} 식단실패`, cls: 'bad' });
+    const m1fail = day.m1ok === false || (!isCurrentWk && day.m1.trim() === '');
+    const m2fail = day.m2ok === false || (!isCurrentWk && day.m2.trim() === '');
+    if (m1fail || m2fail) {
+      const cnt = (m1fail ? 1 : 0) + (m2fail ? 1 : 0);
+      items.push({ icon: '❌', text: `${DAYS[i]} 식단실패${cnt === 2 ? ' (2끼)' : ''}`, cls: 'bad' });
     }
   }
   return items;
