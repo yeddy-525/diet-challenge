@@ -217,6 +217,8 @@ function getExerciseDB() {
 
 // ── FCM 푸시 알림 ──
 
+var FCM_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCwFI3EpFpoUHAy\njSkRzyxlwlWAa4IJ9wR4wHHPYAGX1jM4+nop14x+Dut+rAexiyC40WB4POxma6t+\nTSfsXxPKjHi3S2a1aaCLsQZGujuZh5HVWNBgmPMkrgR2qMjlKFbEaPwGTHDmX/Nv\nK7i9ZdFmR0itkiHJWPV0CZBcCl+HpLgwFGoGrRLRexyp/Sl0kzxhamoA0RQd4M6B\nHnxnooZI9DO42VR+cEl8d5Oxs9JWIHNjkjIvEF74Rn+i+xcCoGNrto9Shu3MMkIE\nUxTdlz+sJiTC5KFiq4O+Uu9fo7ktd3UXgVI15U4oriXrH/G+AFDoHxS9RWyr7QNI\nBv7Y21ndAgMBAAECggEAAmA/StBTmVAUjioSIXe5MqT9AF7zAe1qYF1rFmWblTqX\nta9zkeL4YK8U2xW5Li/MFj0FCeT7Ok/o9YBXBz0qiDN9ttjL9FYONjRXpawCUope\nG7yMu0ZKaaFLgB+7mOlYGmMMRjgmgdqjmfQYvxLY+4H/Z2WEZ9zNGxlnRZwCOVNS\n8D486FxZI6govbCKQt5ClGg1NHQtzf/roypDpEy4FME7X5FbkGUPNFz2lk8EVxWq\nBA52uDVrvFJetQ/0Txgt+gYW5aMnq7Gb7OsNQ8hbpKkqQVDJjORvKLOpIqwyL+7S\n/eSRf5/CSYltraNxuGBxXT7+T5Psf1cbm9BzekhSxQKBgQDlqXUNkNwE1V7JAaSw\nH94/PEsyl/xEBazkd5gNoYp9TtGsoLmHPcCtVG2hAg2xzkh87Xp9SjGsrnWDFDDV\n5wlAGEsF/rBvAinbaulg0QX57TP+Y+YMPvr5B+NqkM7WxfH1+SG92444cxRNpV7z\n2tNTnlgWYijFr4irTngHRMl/vwKBgQDERgRANP6l9lTB5eybd9+CgBTPlTREgwFc\nEai+gg6pT3EiOAuYo2mTD2JZ8/w0knTuJauZ37cNpY1V4hD5TT15VxFWQ7VO+MBt\n+SReBh1zxLHP90AkI/vK8Em9c0JA1c+5ADOPqlspyoatN2/t0xxGO0vNRI+ONPSe\nJh8kVR3NYwKBgQDi/d1SvjWolVfs5jHnXmglKivM4smUVeOvoMDp4BtohOnabLVT\nBWcWKhd9BvGQJyogR/xEL3vviDNfjipCkOrkrd4hG704yvOiCgaHCbGVd6xnKEft\nHKakUvakkmHNh7ICAu4loAbupleP8v5pmYQ75op7/SL9WOSFJLafwI5EMwKBgAbJ\nTPhTXMKsQ734jzfI60d92jpbNFVyGifuzGDZ6lvcTVMbkPsUG2BkVcg6cWv37GcX\nklldrNyh7sMbb+7OxuNdKVJMQQab/ztOM/20RGxuTp+cMvGM9PXNXR9Zzt6jBe2l\nniLHhyNox0NR+WLFu+KJxlMwna4TEqotM0J0VvV1AoGBANxDG4RMJutnLBb9+R6R\ni+Em1lFH5e1+68cLUdyKuXkKRUY7DPKGReIVqxHaWoKXh3MRT/jUsq3JsmeqSO7R\nbkyFo9szG0y0GjuOTuRLWXgEVmHIgFTMUDc/79FFV+iS96iFZVhUh/bCeIdCW9I2\nphuDXVB3cPI32BoGeyb5joHX\n-----END PRIVATE KEY-----\n";
+
 function getSettingValue_(key) {
   const res = getSettings();
   return String((res.data || {})[key] || '');
@@ -224,7 +226,17 @@ function getSettingValue_(key) {
 
 function saveFcmToken_(member, token) {
   if (!member || !token) return { ok: false, error: 'missing params' };
-  return saveSettings('fcm_token_' + member, token);
+  const result = saveSettings('fcm_token_' + member, token);
+  ensureReminderTrigger_();
+  return result;
+}
+
+function ensureReminderTrigger_() {
+  if (getSettingValue_('trigger_created') === 'true') return;
+  try {
+    createReminderTrigger();
+    saveSettings('trigger_created', 'true');
+  } catch(e) {}
 }
 
 function notifyFriend_(member) {
@@ -240,10 +252,7 @@ function notifyFriend_(member) {
 }
 
 function getAccessToken_() {
-  const props = PropertiesService.getScriptProperties();
-  const raw = props.getProperty('FCM_PRIVATE_KEY');
-  if (!raw) throw new Error('FCM_PRIVATE_KEY not set in Script Properties');
-  const privateKey = raw.replace(/\\n/g, '\n');
+  const privateKey = FCM_PRIVATE_KEY;
   const email = 'firebase-adminsdk-fbsvc@diet-challenge-7cb23.iam.gserviceaccount.com';
   const now = Math.floor(Date.now() / 1000);
   const header = Utilities.base64EncodeWebSafe(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).replace(/=+$/, '');

@@ -4,10 +4,10 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-com
 
 if (!firebase.apps.length) {
   firebase.initializeApp({
-    apiKey: 'YOUR_API_KEY',            // ← Firebase 콘솔 > 프로젝트 설정 > 일반 > 웹 앱에서 복사
+    apiKey: 'AIzaSyBWUFXjblgxEcJDcBZSwgTNMG7UMpqifc0',
     projectId: 'diet-challenge-7cb23',
     messagingSenderId: '672431991021',
-    appId: 'YOUR_APP_ID',              // ← Firebase 콘솔 > 프로젝트 설정 > 일반 > 웹 앱에서 복사
+    appId: '1:672431991021:web:6dea93466d4b0d3aa584e4',
   });
 }
 
