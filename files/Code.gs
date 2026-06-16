@@ -38,6 +38,10 @@ function doGet(e) {
       output.setContent(JSON.stringify(notifyFriend_(e.parameter.member)));
     } else if (action === "sendTestPush") {
       output.setContent(JSON.stringify(sendTestPush_(e.parameter.member)));
+    } else if (action === "sendCustomPush") {
+      output.setContent(JSON.stringify(sendCustomPush_(e.parameter.target, e.parameter.title, e.parameter.body)));
+    } else if (action === "getPushHistory") {
+      output.setContent(JSON.stringify(getPushHistory_()));
     } else {
       output.setContent(JSON.stringify({ error: "unknown action" }));
     }
@@ -382,4 +386,58 @@ function resetTriggers() {
   saveSettings('trigger_created', 'false');
   createReminderTrigger();
   saveSettings('trigger_created', 'true');
+}
+
+// ── 커스텀 푸시 발송 + 기록 ──
+
+function logPush_(target, title, body, result) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('푸시기록');
+  if (!sheet) {
+    sheet = ss.insertSheet('푸시기록');
+    sheet.appendRow(['보낸시간', '대상', '제목', '내용', '결과']);
+  }
+  sheet.appendRow([new Date().toISOString(), target, title, body, result]);
+}
+
+function sendCustomPush_(target, title, body) {
+  if (!title || !body) return { ok: false, error: 'missing params' };
+  var members = target === '전체' ? ['예진', '지은'] : [target];
+  var results = [];
+  for (var i = 0; i < members.length; i++) {
+    var member = members[i];
+    var token = getSettingValue_('fcm_token_' + member);
+    if (!token) {
+      logPush_(member, title, body, '토큰없음');
+      results.push({ member: member, ok: false, error: 'no_token' });
+      continue;
+    }
+    try {
+      sendPush_(token, title, body);
+      logPush_(member, title, body, '성공');
+      results.push({ member: member, ok: true });
+    } catch(e) {
+      logPush_(member, title, body, '실패: ' + e.toString());
+      results.push({ member: member, ok: false, error: e.toString() });
+    }
+  }
+  return { ok: true, results: results };
+}
+
+function getPushHistory_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('푸시기록');
+  if (!sheet) return { ok: true, history: [] };
+  var rows = sheet.getDataRange().getValues();
+  var history = [];
+  for (var i = rows.length - 1; i >= 1 && history.length < 30; i--) {
+    history.push({
+      time: rows[i][0] ? new Date(rows[i][0]).toISOString() : '',
+      target: rows[i][1],
+      title: rows[i][2],
+      body: rows[i][3],
+      result: rows[i][4]
+    });
+  }
+  return { ok: true, history: history };
 }
