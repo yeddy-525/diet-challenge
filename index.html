@@ -1047,7 +1047,9 @@ async function fetchRemote() {
           state[stateKey].cheat = true;
         } else if (dateKey.includes('_cheat')) {
           state[stateKey].cheat = Number(value) === 1;
-          // cheatDate를 월요일 fallback으로 설정하지 않음 — _cheat_date 키가 없는 구 데이터용
+          if (Number(value) === 1 && !state[stateKey].cheatDate) {
+            state[stateKey].cheatDate = wkKey;
+          }
         } else if (p.length >= 3) {
           const d = parseInt(p[1].replace('d', ''));
           const field = p[2];
