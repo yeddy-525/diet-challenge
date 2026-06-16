@@ -525,7 +525,7 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
 
 <script>
 // ── 상수 ──
-const API_URL = 'https://script.google.com/macros/s/AKfycbyCtgk5JCgaL55JmhbeE9klaQWH_Fo7v1fRPOmidKX5gH4Hg3YlBxOkGFLWHvDQ-b7m/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwUvhZ1uP7Qo1SUQhx0whrA5KrJh6TrbCVZ--hKFhfeYscs3saIyuzvPbfh1-IsD0W-/exec';
 const ADMIN_CODE = '0525';
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyBWUFXjblgxEcJDcBZSwgTNMG7UMpqifc0',
@@ -875,7 +875,7 @@ function saveMemo() {
 }
 
 // ── 동기화 ──
-const apiUrl = API_URL;
+let apiUrl = localStorage.getItem('diet_api_url') || API_URL;
 async function syncToRemote(member, dateKey, value) {
   if (!apiUrl) return;
   setSyncState('syncing');
@@ -1549,6 +1549,8 @@ async function fetchRemoteSettings() {
 }
 
 function saveAdminSettings() {
+  const newUrl = document.getElementById('admin-api-url').value.trim();
+  if (newUrl) { apiUrl = newUrl; localStorage.setItem('diet_api_url', newUrl); }
   settings.endDate = document.getElementById('admin-end-date').value || CHALLENGE_END;
   settings.exGoal = parseInt(document.getElementById('admin-ex-goal').value) || 4;
   settings.guestCode = document.getElementById('admin-guest-code').value.trim();
