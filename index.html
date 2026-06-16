@@ -299,7 +299,10 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
       <div class="user-name" id="main-user-name">예진</div>
       <div class="user-sub" id="main-user-sub">챌린지 진행 중</div>
     </div>
-    <button class="change-user-btn" onclick="changeUser()">사용자 변경</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="notif-btn" onclick="requestNotifPermission()" style="display:none;padding:7px 12px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🔔 알림 켜기</button>
+      <button class="change-user-btn" onclick="changeUser()">사용자 변경</button>
+    </div>
   </div>
 
   <nav class="tab-nav">
@@ -487,6 +490,14 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
       </div>
       <div id="guest-list" style="margin-bottom:10px;font-size:13px;color:var(--muted);">불러오는 중...</div>
       <button onclick="loadGuestList()" style="padding:8px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:inherit;">새로고침</button>
+    </div>
+    <div class="admin-card" style="margin-top:0;">
+      <div class="admin-card-title">푸시 알림 테스트</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button onclick="testPushTo('예진')" class="admin-btn" style="flex:1;">예진에게 발송</button>
+        <button onclick="testPushTo('지은')" class="admin-btn" style="flex:1;background:var(--green);">지은에게 발송</button>
+      </div>
+      <div id="test-push-result" style="font-size:12px;color:var(--muted);min-height:18px;"></div>
     </div>
     <button class="admin-logout" onclick="logoutAdmin()">관리자 로그아웃</button>
   </div>
@@ -708,7 +719,7 @@ function enterMain() {
   weekOffset = 0;
   if (apiUrl) fetchRemote();
   else render();
-  setTimeout(initNotifications, 800);
+  setTimeout(() => { initNotifications(); updateNotifBtn(); }, 800);
 }
 
 function changeUser() {
@@ -876,6 +887,7 @@ async function initNotifications() {
       });
     });
     notifInitialized = true;
+    updateNotifBtn();
   } catch(e) {}
 }
 
@@ -884,6 +896,39 @@ async function notifyFriend() {
   try {
     fetch(apiUrl + '?action=notifyFriend&member=' + encodeURIComponent(currentUser), { mode: 'no-cors' });
   } catch(e) {}
+}
+
+async function requestNotifPermission() {
+  notifInitialized = false;
+  await initNotifications();
+  updateNotifBtn();
+}
+
+function updateNotifBtn() {
+  const btn = document.getElementById('notif-btn');
+  if (!btn) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) { btn.style.display = 'none'; return; }
+  btn.style.display = Notification.permission === 'granted' ? 'none' : '';
+}
+
+async function testPushTo(member) {
+  const el = document.getElementById('test-push-result');
+  el.textContent = '발송 중...';
+  el.style.color = 'var(--muted)';
+  try {
+    const res = await fetch(apiUrl + '?action=sendTestPush&member=' + encodeURIComponent(member));
+    const json = await res.json();
+    if (json.ok) {
+      el.textContent = '✓ ' + member + ' 에게 발송 완료';
+      el.style.color = 'var(--green-dk)';
+    } else {
+      el.textContent = '✗ ' + (json.error === 'no_token' ? member + ' 토큰 없음 (앱에서 알림 허용 필요)' : json.error);
+      el.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    el.textContent = '오류: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
 }
 
 async function fetchRemote() {

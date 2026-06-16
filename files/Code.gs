@@ -36,6 +36,8 @@ function doGet(e) {
       output.setContent(JSON.stringify(saveFcmToken_(e.parameter.member, e.parameter.token)));
     } else if (action === "notifyFriend") {
       output.setContent(JSON.stringify(notifyFriend_(e.parameter.member)));
+    } else if (action === "sendTestPush") {
+      output.setContent(JSON.stringify(sendTestPush_(e.parameter.member)));
     } else {
       output.setContent(JSON.stringify({ error: "unknown action" }));
     }
@@ -237,6 +239,17 @@ function ensureReminderTrigger_() {
     createReminderTrigger();
     saveSettings('trigger_created', 'true');
   } catch(e) {}
+}
+
+function sendTestPush_(member) {
+  const token = getSettingValue_('fcm_token_' + member);
+  if (!token) return { ok: false, error: 'no_token' };
+  try {
+    sendPush_(token, '테스트 알림 🔔', member + '에게 발송된 테스트 푸시예요!');
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, error: e.toString() };
+  }
 }
 
 function notifyFriend_(member) {
