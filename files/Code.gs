@@ -318,10 +318,8 @@ function getDayInfoKST_() {
   return { dayIdx: dayIdx, weekKey: monKST.toISOString().slice(0, 10), dow: dow };
 }
 
-// 매일 22:00 KST에 트리거로 실행 — 오늘 식단 미입력 멤버에게 알림 발송
-function checkAndSendReminders() {
+function getMealData_() {
   var info = getDayInfoKST_();
-  if (info.dow === 0) return; // 일요일 제외
   var sheet = getOrCreateSheet(SHEET_CHALLENGE);
   var rows = sheet.getDataRange().getValues();
   var data = {};
@@ -331,27 +329,57 @@ function checkAndSendReminders() {
     if (!data[m]) data[m] = {};
     data[m][dk] = v;
   }
+  return { info: info, data: data };
+}
+
+// 매일 14:00 KST — 점심 미입력 시 알림
+function sendLunchReminder() {
+  var res = getMealData_();
+  if (res.info.dow === 0) return;
   var members = ['예진', '지은'];
   for (var j = 0; j < members.length; j++) {
     var member = members[j];
     var token = getSettingValue_('fcm_token_' + member);
     if (!token) continue;
-    var md = data[member] || {};
-    var m1 = String(md[info.weekKey + '_d' + info.dayIdx + '_m1'] || '').trim();
-    var m2 = String(md[info.weekKey + '_d' + info.dayIdx + '_m2'] || '').trim();
-    if (!m1 || !m2) {
-      try {
-        sendPush_(token, '식단 기록 안 했잖아 🍽️', '오늘 식단 아직 안 썼어! 얼른 기록해 😤');
-      } catch(e) {}
+    var md = res.data[member] || {};
+    var m1 = String(md[res.info.weekKey + '_d' + res.info.dayIdx + '_m1'] || '').trim();
+    if (!m1) {
+      try { sendPush_(token, '기 록 해 🔥', '점심 먹었을 텐데 왜 안 써?'); } catch(e) {}
     }
   }
 }
 
-// Apps Script 편집기에서 한 번만 실행 — 매일 22:00 KST 트리거 등록
-// (실행 전 Apps Script 프로젝트 설정 > 시간대를 "Asia/Seoul"로 변경 필요)
+// 매일 20:00 KST — 저녁 미입력 시 알림
+function sendDinnerReminder() {
+  var res = getMealData_();
+  if (res.info.dow === 0) return;
+  var members = ['예진', '지은'];
+  for (var j = 0; j < members.length; j++) {
+    var member = members[j];
+    var token = getSettingValue_('fcm_token_' + member);
+    if (!token) continue;
+    var md = res.data[member] || {};
+    var m2 = String(md[res.info.weekKey + '_d' + res.info.dayIdx + '_m2'] || '').trim();
+    if (!m2) {
+      try { sendPush_(token, '기 록 해 🔥', '저녁 먹었을 텐데 왜 안 써?'); } catch(e) {}
+    }
+  }
+}
+
 function createReminderTrigger() {
   ScriptApp.getProjectTriggers().forEach(function(t) {
-    if (t.getHandlerFunction() === 'checkAndSendReminders') ScriptApp.deleteTrigger(t);
+    var fn = t.getHandlerFunction();
+    if (fn === 'checkAndSendReminders' || fn === 'sendLunchReminder' || fn === 'sendDinnerReminder') {
+      ScriptApp.deleteTrigger(t);
+    }
   });
-  ScriptApp.newTrigger('checkAndSendReminders').timeBased().atHour(22).everyDays(1).create();
+  ScriptApp.newTrigger('sendLunchReminder').timeBased().atHour(14).everyDays(1).create();
+  ScriptApp.newTrigger('sendDinnerReminder').timeBased().atHour(20).everyDays(1).create();
+}
+
+// GAS 편집기에서 직접 실행 — 기존 트리거 삭제 후 새 시간으로 재등록
+function resetTriggers() {
+  saveSettings('trigger_created', 'false');
+  createReminderTrigger();
+  saveSettings('trigger_created', 'true');
 }
