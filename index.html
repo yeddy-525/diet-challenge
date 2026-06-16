@@ -901,7 +901,7 @@ async function fetchCalories(m1, m2, idx, wkKey) {
   try {
     const res = await fetch(apiUrl + '?action=calories&m1=' + encodeURIComponent(m1||'') + '&m2=' + encodeURIComponent(m2||''));
     const json = await res.json();
-    if (!json.ok) { if (b1) b1.textContent = ''; if (b2) b2.textContent = ''; return; }
+    if (!json.ok) { if (b1) b1.textContent = json.error || 'no_ok'; if (b2) b2.textContent = ''; return; }
     const state = loadLocal();
     const wk = getWk(state, currentUser, weekOffset);
     if (hasM1 && json.cal1) { wk.days[idx].m1cal = json.cal1; if (b1) b1.textContent = '약 ' + json.cal1 + ' kcal'; }

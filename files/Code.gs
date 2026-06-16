@@ -433,18 +433,26 @@ function estimateCalories_(m1, m2) {
   const key = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
   if (!key) return { ok: false, error: 'no_key' };
   if (!m1.trim() && !m2.trim()) return { ok: false };
-  const prompt = '다음 두 식단의 예상 칼로리를 각각 숫자(kcal)로 추정해줘. 반드시 JSON 형식으로만 답해: {"cal1": 숫자, "cal2": 숫자}. 모르면 대략 추정하면 돼. 식단1: "' + m1 + '", 식단2: "' + m2 + '"';
+  const prompt = '식단1: "' + m1 + '", 식단2: "' + m2 + '" 각각의 예상 칼로리(kcal)를 추정해줘. 식단이 비어있으면 0으로 해줘.';
   try {
     const res = UrlFetchApp.fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key,
       { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-        payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
+        payload: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: { cal1: { type: 'INTEGER' }, cal2: { type: 'INTEGER' } },
+              required: ['cal1', 'cal2']
+            }
+          }
+        }) }
     );
     const json = JSON.parse(res.getContentText());
     const text = (json.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
-    const match = text.match(/\{[\s\S]*?\}/);
-    if (!match) return { ok: false, error: 'parse_error' };
-    const cal = JSON.parse(match[0]);
+    const cal = JSON.parse(text);
     return { ok: true, cal1: cal.cal1 || 0, cal2: cal.cal2 || 0 };
   } catch(e) {
     return { ok: false, error: e.toString() };
