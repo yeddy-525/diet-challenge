@@ -909,7 +909,7 @@ async function fetchCalories(m1, m2, idx, wkKey) {
     if (hasM2 && json.cal2) { wk.days[idx].m2cal = json.cal2; if (b2) b2.textContent = '약 ' + json.cal2 + ' kcal'; }
     else if (b2) b2.textContent = '';
     saveLocal(state);
-  } catch(e) { if (b1) b1.textContent = ''; if (b2) b2.textContent = ''; }
+  } catch(e) { if (b1) b1.textContent = 'ERR:' + e.message; if (b2) b2.textContent = ''; }
 }
 
 // ── 동기화 ──
