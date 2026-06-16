@@ -124,6 +124,7 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
 .record-input.empty-warn{border-color:var(--red);background:var(--red-lt);}
 .save-btn{margin:0 14px 14px;width:calc(100% - 28px);padding:10px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;transition:all .15s;}
 .save-btn:active{opacity:.85;}
+.cal-badge{font-size:11px;color:var(--muted);padding:2px 0 0;min-height:15px;letter-spacing:-.01em;}
 
 /* ── 대결 카드 ── */
 .battle-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);margin:0 16px 12px;padding:16px 16px 14px;}
@@ -365,6 +366,7 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
             <input class="record-input" id="memo-m1" placeholder="첫 번째 식단" style="flex:1;" />
             <button id="m1-toggle" onclick="toggleMealOk(1)" style="min-width:44px;height:38px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--green-lt);color:var(--green-dk);font-size:14px;cursor:pointer;font-family:inherit;transition:all .15s;">✅</button>
           </div>
+          <div id="cal-badge-m1" class="cal-badge"></div>
         </div>
         <div class="record-row">
           <div class="record-label">식단 2</div>
@@ -372,6 +374,7 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
             <input class="record-input" id="memo-m2" placeholder="두 번째 식단" style="flex:1;" />
             <button id="m2-toggle" onclick="toggleMealOk(2)" style="min-width:44px;height:38px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--green-lt);color:var(--green-dk);font-size:14px;cursor:pointer;font-family:inherit;transition:all .15s;">✅</button>
           </div>
+          <div id="cal-badge-m2" class="cal-badge"></div>
         </div>
       </div>
       <button class="save-btn" onclick="saveMemo()" id="save-btn">저장</button>
@@ -518,6 +521,16 @@ body{font-family:'Pretendard',sans-serif;letter-spacing:-0.01em;background:var(-
         <button onclick="loadPushHistory()" style="font-size:11px;padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;">불러오기</button>
       </div>
       <div id="push-history" style="font-size:12px;color:var(--muted);">불러오기 버튼을 눌러주세요</div>
+    </div>
+    <div class="admin-card" style="margin-top:0;">
+      <div class="admin-card-title">AI 칼로리 추정</div>
+      <div class="admin-field">
+        <div class="admin-label">Gemini API 키</div>
+        <input class="admin-input" id="admin-gemini-key" placeholder="AIzaSy..." style="font-family:'DM Mono',monospace;font-size:11px;" />
+      </div>
+      <button class="admin-btn" onclick="saveGeminiKey()">저장</button>
+      <div id="gemini-key-result" style="font-size:12px;margin-top:6px;min-height:18px;"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">Google AI Studio에서 무료 발급 → 저장하면 두 명 모두 자동으로 칼로리 추정 사용</div>
     </div>
     <button class="admin-logout" onclick="logoutAdmin()">관리자 로그아웃</button>
   </div>
@@ -872,6 +885,31 @@ function saveMemo() {
   btn.textContent = '저장됨 ✓'; btn.style.background = 'var(--green-dk)';
   setTimeout(() => { btn.textContent = '저장'; btn.style.background = 'var(--blue)'; }, 1500);
   renderDotOnly();
+  fetchCalories(wk.days[idx].m1, wk.days[idx].m2, idx, wkKey);
+}
+
+// ── AI 칼로리 추정 ──
+async function fetchCalories(m1, m2, idx, wkKey) {
+  if (!apiUrl) return;
+  const hasM1 = (m1 || '').trim() !== '';
+  const hasM2 = (m2 || '').trim() !== '';
+  if (!hasM1 && !hasM2) return;
+  const b1 = document.getElementById('cal-badge-m1');
+  const b2 = document.getElementById('cal-badge-m2');
+  if (hasM1 && b1) b1.textContent = '계산 중...';
+  if (hasM2 && b2) b2.textContent = '계산 중...';
+  try {
+    const res = await fetch(apiUrl + '?action=calories&m1=' + encodeURIComponent(m1||'') + '&m2=' + encodeURIComponent(m2||''));
+    const json = await res.json();
+    if (!json.ok) { if (b1) b1.textContent = ''; if (b2) b2.textContent = ''; return; }
+    const state = loadLocal();
+    const wk = getWk(state, currentUser, weekOffset);
+    if (hasM1 && json.cal1) { wk.days[idx].m1cal = json.cal1; if (b1) b1.textContent = '약 ' + json.cal1 + ' kcal'; }
+    else if (b1) b1.textContent = '';
+    if (hasM2 && json.cal2) { wk.days[idx].m2cal = json.cal2; if (b2) b2.textContent = '약 ' + json.cal2 + ' kcal'; }
+    else if (b2) b2.textContent = '';
+    saveLocal(state);
+  } catch(e) { if (b1) b1.textContent = ''; if (b2) b2.textContent = ''; }
 }
 
 // ── 동기화 ──
@@ -1327,6 +1365,10 @@ function render() {
   if (document.activeElement !== m2El) m2El.value = typeof selDay.m2 === 'string' ? selDay.m2 : '';
   m1El.className = 'record-input' + (selDay.m1.trim() === '' && isCurrentWk && selIdx <= todayIdx ? ' empty-warn' : '');
   m2El.className = 'record-input' + (selDay.m2.trim() === '' && isCurrentWk && selIdx <= todayIdx ? ' empty-warn' : '');
+  const cb1 = document.getElementById('cal-badge-m1');
+  const cb2 = document.getElementById('cal-badge-m2');
+  if (cb1) cb1.textContent = selDay.m1cal ? '약 ' + selDay.m1cal + ' kcal' : '';
+  if (cb2) cb2.textContent = selDay.m2cal ? '약 ' + selDay.m2cal + ' kcal' : '';
   updateMealToggleUI(selIdx, selDay);
 
   // 치팅
@@ -1546,6 +1588,18 @@ async function fetchRemoteSettings() {
     const codeBtn = document.getElementById('code-submit-btn');
     if (codeBtn) codeBtn.disabled = false;
   }
+}
+
+async function saveGeminiKey() {
+  const key = document.getElementById('admin-gemini-key').value.trim();
+  const el = document.getElementById('gemini-key-result');
+  if (!key) { el.textContent = 'API 키를 입력해주세요'; el.style.color = 'var(--red)'; return; }
+  el.textContent = '저장 중...'; el.style.color = 'var(--muted)';
+  try {
+    await fetch(apiUrl + '?action=setGeminiKey&key=' + encodeURIComponent(key));
+    el.textContent = '✓ 저장됐어요! 이제 두 명 모두 칼로리 추정 사용 가능'; el.style.color = 'var(--green-dk)';
+    document.getElementById('admin-gemini-key').value = '';
+  } catch(e) { el.textContent = '저장 실패'; el.style.color = 'var(--red)'; }
 }
 
 function saveAdminSettings() {

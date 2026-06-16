@@ -42,6 +42,11 @@ function doGet(e) {
       output.setContent(JSON.stringify(sendCustomPush_(e.parameter.target, e.parameter.title, e.parameter.body)));
     } else if (action === "getPushHistory") {
       output.setContent(JSON.stringify(getPushHistory_()));
+    } else if (action === "calories") {
+      output.setContent(JSON.stringify(estimateCalories_(e.parameter.m1 || '', e.parameter.m2 || '')));
+    } else if (action === "setGeminiKey") {
+      PropertiesService.getScriptProperties().setProperty('GEMINI_KEY', e.parameter.key || '');
+      output.setContent(JSON.stringify({ ok: true }));
     } else {
       output.setContent(JSON.stringify({ error: "unknown action" }));
     }
@@ -422,6 +427,28 @@ function sendCustomPush_(target, title, body) {
     }
   }
   return { ok: true, results: results };
+}
+
+function estimateCalories_(m1, m2) {
+  const key = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+  if (!key) return { ok: false, error: 'no_key' };
+  if (!m1.trim() && !m2.trim()) return { ok: false };
+  const prompt = '다음 두 식단의 예상 칼로리를 각각 숫자(kcal)로 추정해줘. 반드시 JSON 형식으로만 답해: {"cal1": 숫자, "cal2": 숫자}. 모르면 대략 추정하면 돼. 식단1: "' + m1 + '", 식단2: "' + m2 + '"';
+  try {
+    const res = UrlFetchApp.fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key,
+      { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+        payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
+    );
+    const json = JSON.parse(res.getContentText());
+    const text = (json.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    const match = text.match(/\{[\s\S]*?\}/);
+    if (!match) return { ok: false, error: 'parse_error' };
+    const cal = JSON.parse(match[0]);
+    return { ok: true, cal1: cal.cal1 || 0, cal2: cal.cal2 || 0 };
+  } catch(e) {
+    return { ok: false, error: e.toString() };
+  }
 }
 
 function getPushHistory_() {
