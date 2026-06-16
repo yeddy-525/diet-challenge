@@ -901,7 +901,8 @@ async function fetchCalories(m1, m2, idx, wkKey) {
   try {
     const res = await fetch(apiUrl + '?action=calories&m1=' + encodeURIComponent(m1||'') + '&m2=' + encodeURIComponent(m2||''));
     const rawText = await res.text();
-    if (b1) b1.textContent = 'RAW:' + rawText.slice(0, 80);
+    if (b1) b1.textContent = '[' + res.status + '] len=' + rawText.length + ' | ' + rawText.slice(0, 60);
+    return;
     const json = JSON.parse(rawText);
     if (!json.ok) { if (b1) b1.textContent = json.error || 'no_ok'; if (b2) b2.textContent = ''; return; }
     const state = loadLocal();
