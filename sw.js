@@ -13,8 +13,9 @@ if (!firebase.apps.length) {
 
 firebase.messaging().onBackgroundMessage(payload => {
   const n = payload.notification || {};
-  self.registration.showNotification(n.title || '몸짱대결', {
-    body: n.body || '',
+  const d = payload.data || {};
+  self.registration.showNotification(d.title || n.title || '몸짱대결', {
+    body: d.body || n.body || '',
     icon: 'https://yeddy-525.github.io/diet-challenge/icons/icon-192.png',
     tag: 'diet-challenge',
     requireInteraction: false,
