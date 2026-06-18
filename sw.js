@@ -18,7 +18,7 @@ messaging.onBackgroundMessage(payload => {
   const n = payload.notification || {};
   self.registration.showNotification(n.title || '몸짱대결', {
     body: n.body || '',
-    icon: 'https://yeddy-525.github.io/diet-challenge/icons/icon-192.png',
+    badge: 'https://yeddy-525.github.io/diet-challenge/icons/icon-192.png',
     tag: 'diet-challenge',
   });
 });
