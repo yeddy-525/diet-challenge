@@ -11,7 +11,17 @@ if (!firebase.apps.length) {
   });
 }
 
-// 알림 표시는 Firebase가 webpush.notification으로 자동 처리
+const messaging = firebase.messaging();
+messaging.onBackgroundMessage(payload => {
+  const isIOS = /iphone|ipad|ipod/i.test(self.navigator.userAgent);
+  if (isIOS) return; // iOS는 OS가 webpush.notification으로 자동 표시
+  const n = payload.notification || {};
+  self.registration.showNotification(n.title || '몸짱대결', {
+    body: n.body || '',
+    icon: 'https://yeddy-525.github.io/diet-challenge/icons/icon-192.png',
+    tag: 'diet-challenge',
+  });
+});
 
 // ── PWA 캐시 ──
 const CACHE = 'diet-v4';
