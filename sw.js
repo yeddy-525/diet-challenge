@@ -11,16 +11,7 @@ if (!firebase.apps.length) {
   });
 }
 
-firebase.messaging().onBackgroundMessage(payload => {
-  const n = payload.notification || {};
-  const d = payload.data || {};
-  self.registration.showNotification(d.title || n.title || '몸짱대결', {
-    body: d.body || n.body || '',
-    icon: 'https://yeddy-525.github.io/diet-challenge/icons/icon-192.png',
-    tag: 'diet-challenge',
-    requireInteraction: false,
-  });
-});
+// 알림 표시는 Firebase가 webpush.notification으로 자동 처리
 
 // ── PWA 캐시 ──
 const CACHE = 'diet-v4';
