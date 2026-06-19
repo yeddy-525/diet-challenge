@@ -20,7 +20,20 @@ messaging.onBackgroundMessage(payload => {
     body: n.body || '',
     icon: 'https://yeddy-525.github.io/diet-challenge/icons/icon-192.png',
     tag: 'diet-challenge',
+    data: { url: 'https://yeddy-525.github.io/diet-challenge/' },
   });
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || 'https://yeddy-525.github.io/diet-challenge/';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const existing = list.find(c => c.url.startsWith('https://yeddy-525.github.io/diet-challenge'));
+      if (existing) return existing.focus();
+      return clients.openWindow(url);
+    })
+  );
 });
 
 // ── PWA 캐시 ──
